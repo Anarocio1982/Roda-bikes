@@ -378,8 +378,22 @@ function fmt(s){ return new Date(s+'T00:00:00').toLocaleDateString('pt-PT',{day:
 function fmtFull(s){ return new Date(s+'T00:00:00').toLocaleDateString('pt-PT',{weekday:'short',day:'numeric',month:'short'}); }
 
 function durationDays(dur){
-  const map={'Full day (10am–6pm)':1,'24 hours':1,'2 days':2,'3 days':3,'4 days':4,'5 days':5,'6 days':6,'7 days':7,'More than 7 days':8};
-  return map[dur]||1;
+  if(!dur) return 1;
+  // Normalise dashes — Google Sheets may return hyphen instead of en-dash
+  const d = dur.replace(/[-–—]/g, '–').trim();
+  const map={
+    'Full day (10am–6pm)':1,
+    'Full day (10am-6pm)':1,
+    '24 hours':1,
+    '2 days':2,'3 days':3,'4 days':4,'5 days':5,'6 days':6,'7 days':7,
+    'More than 7 days':8
+  };
+  // Try exact match first, then normalised, then extract number
+  if(map[dur]) return map[dur];
+  if(map[d]) return map[d];
+  const n = parseInt(dur);
+  if(!isNaN(n) && n >= 1) return n;
+  return 1;
 }
 function bookingEndDate(b){ return addDays(b.start, durationDays(b.duration)-1); }
 function bookingIsActive(b,date){ return b.start<=date && bookingEndDate(b)>=date; }
