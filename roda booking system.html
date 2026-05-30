@@ -1024,11 +1024,24 @@ function sheetsBatchUpdate(data){
 
 function isoDate(s){
   if(!s) return '';
-  const m = s.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
-  if(m) return `${m[3]}-${m[2]}-${m[1]}`;
+  s = String(s).trim();
+  // Already YYYY-MM-DD
   if(/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
+  // DD/MM/YYYY
+  const m1 = s.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+  if(m1) return `${m1[3]}-${m1[2]}-${m1[1]}`;
+  // M/D/YYYY or MM/DD/YYYY (Google Sheets US format)
+  const m2 = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+  if(m2) return `${m2[3]}-${String(m2[1]).padStart(2,'0')}-${String(m2[2]).padStart(2,'0')}`;
+  // D/M/YYYY or DD/MM/YYYY (European with single digits)
+  const m3 = s.match(/^(\d{1,2})-(\d{1,2})-(\d{4})$/);
+  if(m3) return `${m3[3]}-${String(m3[2]).padStart(2,'0')}-${String(m3[1]).padStart(2,'0')}`;
+  // Excel/Sheets serial number
   const n=parseInt(s);
   if(!isNaN(n)&&n>40000){ const d=new Date((n-25569)*86400*1000); return d.toISOString().slice(0,10); }
+  // Try native Date parse as last resort
+  const d = new Date(s);
+  if(!isNaN(d.getTime())) return d.toISOString().slice(0,10);
   return s;
 }
 
@@ -1056,6 +1069,7 @@ async function syncFromSheet(){
     // Parse bookings: A=ID, B=Who, C=Phone, D=Start, E=Duration,
     //                 F=CityQty, G=GravelQty, H=FatQty, I=TouringQty, J=Paid, K=Notes
     let idCtr = 200;
+    console.log('Raw bookings from sheet:', JSON.stringify(bData.values||[]));
     const parsedBk = (bData.values||[]).filter(r=>r[1]).map(r=>{
       const types=[];
       const cq=parseInt(r[5])||0, gq=parseInt(r[6])||0, fq=parseInt(r[7])||0, tq=parseInt(r[8])||0;
