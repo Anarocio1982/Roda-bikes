@@ -758,9 +758,9 @@ function openBookingModal(editId){
           <input type="text" id="bk-phone" value="${b?b.phone:''}" placeholder="+351 9xx xxx xxx"></div>
         <div class="fg-row">
           <div class="fg"><label>Start date</label>
-            <input type="date" id="bk-start" value="${b?b.start:t}" onchange="checkBkAvail(${editId||'null'})"></div>
+            <input type="date" id="bk-start" value="${b?b.start:t}" onchange="checkBkAvail()"></div>
           <div class="fg"><label>Duration</label>
-            <select id="bk-dur" onchange="checkBkAvail(${editId||'null'})">${durOpts}</select></div>
+            <select id="bk-dur" onchange="checkBkAvail()">${durOpts}</select></div>
         </div>
 
         <div class="fg"><label>Bikes requested</label>
@@ -779,7 +779,7 @@ function openBookingModal(editId){
 
         <div class="modal-actions">
           <button class="btn-cancel" onclick="closeModal()">Cancel</button>
-          <button class="btn-save" onclick="saveBooking(${editId||'null'})">${b?'Save changes':'Confirm booking'}</button>
+          <button class="btn-save" onclick="saveBooking()">${b?'Save changes':'Confirm booking'}</button>
         </div>
       </div>
     </div>`;
@@ -803,7 +803,7 @@ function sizeOptsFor(type,selected){
 function updateSizeOpts(i){
   const type=document.querySelector(`.tr-type[data-row="${i}"]`).value;
   document.getElementById(`tr-size-${i}`).innerHTML=sizeOptsFor(type,null);
-  checkBkAvail(currentEditId);
+  checkBkAvail();
 }
 function addTypeRow(){
   const container=document.getElementById('bk-type-rows');
@@ -812,14 +812,13 @@ function addTypeRow(){
   typeRowCount++;
   div.innerHTML=html;
   container.appendChild(div.firstChild);
-  checkBkAvail(currentEditId);
+  checkBkAvail();
 }
 function removeTypeRow(i){ const el=document.getElementById(`type-row-${i}`); if(el) el.remove(); }
 
 let currentEditId=null;
-function checkBkAvail(editId){
-  if(editId==='null'||editId===undefined) editId=null;
-  currentEditId=editId;
+function checkBkAvail(){
+  const editId = currentEditId || null;
   const start=document.getElementById('bk-start')?.value;
   const dur=document.getElementById('bk-dur')?.value;
   if(!start||!dur||!/^\d{4}-\d{2}-\d{2}$/.test(start)) return;
@@ -862,10 +861,9 @@ function getTypeRows(){
   return rows;
 }
 
-function saveBooking(editId){
-  console.log('saveBooking called with editId:', editId, typeof editId);
-  if(editId==='null'||editId===undefined) editId=null;
-  console.log('editId after null check:', editId);
+function saveBooking(){
+  let editId = currentEditId || null;
+  console.log('saveBooking called, currentEditId:', currentEditId, 'editId:', editId);
   const who=document.getElementById('bk-who').value.trim();
   const phone=document.getElementById('bk-phone').value.trim();
   const start=document.getElementById('bk-start').value;
