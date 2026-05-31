@@ -379,7 +379,12 @@ function today(){
     String(d.getMonth()+1).padStart(2,'0') + '-' +
     String(d.getDate()).padStart(2,'0');
 }
-function addDays(s,n){ if(!s||!/^\d{4}-\d{2}-\d{2}$/.test(s)) return s||''; const d=new Date(s+'T00:00:00'); d.setDate(d.getDate()+n); return d.toISOString().slice(0,10); }
+function addDays(s,n){
+  if(!s||!/^\d{4}-\d{2}-\d{2}$/.test(s)) return s||'';
+  const d=new Date(s+'T12:00:00'); // Use noon to avoid DST/timezone edge cases
+  d.setDate(d.getDate()+n);
+  return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+}
 function fmt(s){ return new Date(s+'T00:00:00').toLocaleDateString('pt-PT',{day:'2-digit',month:'short'}); }
 function fmtFull(s){ return new Date(s+'T00:00:00').toLocaleDateString('pt-PT',{weekday:'short',day:'numeric',month:'short'}); }
 
@@ -873,7 +878,8 @@ function saveBooking(editId){
     const idx=bookings.findIndex(b=>b.id===editId);
     if(idx>=0) bookings[idx]={id:editId,who,phone,start,duration,types,paid,source,notes};
   } else {
-    bookings.push({id:nextBkId++,who,phone,start,duration,types,paid,source,notes});
+    const newId = 'BK-' + Date.now().toString().slice(-6);
+    bookings.push({id:newId,who,phone,start,duration,types,paid,source,notes});
   }
   closeModal();
   renderAll();
@@ -1095,7 +1101,14 @@ async function syncFromSheet(){
     //                 F=CityQty, G=GravelQty, H=FatQty, I=TouringQty, J=Paid, K=Notes
     let idCtr = 200;
     console.log('Raw bookings from sheet:', JSON.stringify(bData.values||[]));
-    const parsedBk = (bData.values||[]).filter(r=>r[1]).map(r=>{
+    const seenIds = new Set();
+    const parsedBk = (bData.values||[]).filter(r=>r[1]).map((r, rowIdx)=>{
+      let rowId = r[0] || ('BK-R'+rowIdx);
+      // If ID is missing, numeric only, or duplicate, generate a unique one
+      if(!rowId || rowId === '10' || rowId === '0' || seenIds.has(rowId)){
+        rowId = 'BK-R' + rowIdx;
+      }
+      seenIds.add(rowId);
       const types=[];
       const cq=parseInt(r[5])||0, gq=parseInt(r[6])||0, fq=parseInt(r[7])||0, tq=parseInt(r[8])||0;
       if(cq>0) types.push({type:'city-ebike', size:'Standard', qty:cq});
@@ -1103,7 +1116,7 @@ async function syncFromSheet(){
       if(fq>0) types.push({type:'fat-tyre',   size:'Standard', qty:fq});
       if(tq>0) types.push({type:'e-touring',  size:'Standard', qty:tq});
       return {
-        id: r[0]||('BK-'+String(idCtr++).padStart(3,'0')),
+        id: rowId,
         who: r[1]||'', phone: r[2]||'',
         start: isoDate(r[3]||''),
         duration: r[4]||'Full day (10am\u20136pm)',
