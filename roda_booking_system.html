@@ -395,7 +395,7 @@ function durationDays(dur){
   const map={
     'Full day (10am–6pm)':1,
     'Full day (10am-6pm)':1,
-    '24 hours':1,
+    '24 hours':2,
     '2 days':2,'3 days':3,'4 days':4,'5 days':5,'6 days':6,'7 days':7,
     'More than 7 days':8
   };
@@ -496,7 +496,7 @@ function bookingTableRow(b, actions=true){
     <div class="bk-cell">${typeChips(b.types)}</div>
     <div class="bk-cell">${tags.join(' ')}</div>
     <div class="bk-cell" style="font-size:12px;color:var(--ink3)">${b.notes||'—'}</div>
-    <div class="bk-cell"><div class="bk-actions">${actions?`<button class="btn-icon" onclick="openBookingModal(${b.id})">✎</button><button class="btn-icon del" onclick="deleteBooking(${b.id})">✕</button>`:''}</div></div>
+    <div class="bk-cell"><div class="bk-actions">${actions?`<button class="btn-icon" onclick="openBookingModal('${b.id}')">✎</button><button class="btn-icon del" onclick="deleteBooking('${b.id}')">✕</button>`:''}</div></div>
   </div>`;
 }
 
@@ -528,12 +528,17 @@ function renderDashboard(){
   const ready=totalReadyBikes();
   const total=totalBikes();
 
+  // Calculate bikes actually available today (total minus bikes out in active bookings)
+  const bikesOutToday = active.reduce((s,b)=>s+b.types.reduce((ss,t)=>ss+t.qty,0),0);
+  const bikesInPrep   = bikes.filter(b=>b.status==='prep').length;
+  const availableNow  = Math.max(0, total - bikesOutToday - bikesInPrep);
+
   // Stats
   document.getElementById('dash-stats').innerHTML=`
     <div class="stat-card ${active.length?'':'good'}">
       <div class="stat-num">${active.length}</div>
       <div class="stat-lbl">Active rentals</div>
-      <div class="stat-sub">${active.reduce((s,b)=>s+b.types.reduce((ss,t)=>ss+t.qty,0),0)} bikes out today</div>
+      <div class="stat-sub">${bikesOutToday} bike${bikesOutToday!==1?'s':''} out today</div>
     </div>
     <div class="stat-card ${dueToday.length?'alert':'good'}">
       <div class="stat-num">${dueToday.length}</div>
@@ -545,10 +550,10 @@ function renderDashboard(){
       <div class="stat-lbl">Upcoming bookings</div>
       <div class="stat-sub">Next 7 days</div>
     </div>
-    <div class="stat-card ${ready<total*0.5?'warn':'good'}">
-      <div class="stat-num">${ready}</div>
+    <div class="stat-card ${availableNow<3?'warn':'good'}">
+      <div class="stat-num">${availableNow}</div>
       <div class="stat-lbl">Bikes ready to rent</div>
-      <div class="stat-sub">of ${total} total</div>
+      <div class="stat-sub">of ${total} total${bikesInPrep>0?' · '+bikesInPrep+' in prep':''}</div>
     </div>`;
 
   // Alerts
@@ -875,7 +880,7 @@ function saveBooking(editId){
   }
 
   if(editId){
-    const idx=bookings.findIndex(b=>b.id===editId);
+    const idx=bookings.findIndex(b=>String(b.id)===String(editId));
     if(idx>=0) bookings[idx]={id:editId,who,phone,start,duration,types,paid,source,notes};
   } else {
     const newId = 'BK-' + Date.now().toString().slice(-6);
@@ -896,7 +901,7 @@ function saveBooking(editId){
 function deleteBooking(id){
   const b=bookings.find(x=>x.id===id);
   if(!b) return;
-  if(confirm(`Remove booking for ${b.who}?`)){ bookings=bookings.filter(x=>x.id!==id); renderAll(); }
+  if(confirm(`Remove booking for ${b.who}?`)){ bookings=bookings.filter(x=>String(x.id)!==String(id)); renderAll(); }
 }
 
 // ════════════════════════════════════════════════════════════════
