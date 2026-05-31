@@ -863,7 +863,9 @@ function getTypeRows(){
 }
 
 function saveBooking(editId){
+  console.log('saveBooking called with editId:', editId, typeof editId);
   if(editId==='null'||editId===undefined) editId=null;
+  console.log('editId after null check:', editId);
   const who=document.getElementById('bk-who').value.trim();
   const phone=document.getElementById('bk-phone').value.trim();
   const start=document.getElementById('bk-start').value;
@@ -886,7 +888,10 @@ function saveBooking(editId){
   }
 
   if(editId){
+    console.log('Looking for booking with id:', editId);
+    console.log('Available booking ids:', bookings.map(b=>b.id));
     const idx=bookings.findIndex(b=>String(b.id)===String(editId));
+    console.log('Found at index:', idx);
     if(idx>=0){
       bookings[idx]={id:String(editId),who,phone,start,duration,types,paid,source,notes};
       closeModal();
@@ -999,13 +1004,6 @@ function editBk(idx){ openBookingModal(BK_EDIT_MAP[idx]); }
 function delBk(idx){  deleteBooking(BK_DEL_MAP[idx]); }
 
 // Global click handler for edit/delete buttons using data attributes
-
-document.addEventListener('click', function(e){
-  const editBtn = e.target.closest('[data-edit]');
-  const delBtn  = e.target.closest('[data-delete]');
-  if(editBtn){ openBookingModal(editBtn.getAttribute('data-edit')); }
-  if(delBtn){  deleteBooking(delBtn.getAttribute('data-delete')); }
-});
 
 function renderAll(){
   renderDashboard();
