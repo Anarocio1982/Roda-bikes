@@ -492,7 +492,7 @@ function bookingTableRow(b, actions=true){
     <div class="bk-cell">${typeChips(b.types)}</div>
     <div class="bk-cell">${tags.join(' ')}</div>
     <div class="bk-cell" style="font-size:12px;color:var(--ink3)">${b.notes||'—'}</div>
-    <div class="bk-cell"><div class="bk-actions">${actions?`<button class="btn-icon" onclick="openBookingModal('${b.id}')">✎</button><button class="btn-icon del" onclick="deleteBooking('${b.id}')">✕</button>`:''}</div></div>
+    <div class="bk-cell"><div class="bk-actions">${actions?`<button class="btn-icon" data-edit="${b.id}">✎</button><button class="btn-icon del" data-delete="${b.id}">✕</button>`:''}</div></div>
   </div>`;
 }
 
@@ -981,6 +981,14 @@ function showPage(name, el){
 }
 
 function closeModal(){ document.getElementById('modal').innerHTML=''; }
+
+// Global click handler for edit/delete buttons using data attributes
+document.addEventListener('click', function(e){
+  const editBtn = e.target.closest('[data-edit]');
+  const delBtn  = e.target.closest('[data-delete]');
+  if(editBtn){ openBookingModal(editBtn.getAttribute('data-edit')); }
+  if(delBtn){  deleteBooking(delBtn.getAttribute('data-delete')); }
+});
 
 function renderAll(){
   renderDashboard();
