@@ -476,7 +476,12 @@ function typeChips(types){
   return `<div class="bk-type-chips">${types.map(t=>`<span class="type-chip">${BIKE_TYPES[t.type].short}${t.size!=='Standard'?' '+t.size:''} ×${t.qty}</span>`).join('')}</div>`;
 }
 
+let _bkRowIdx = 0; // reset before each render batch
+function resetBkRowIdx(){ _bkRowIdx = 0; }
 function bookingTableRow(b, actions=true){
+  const _idx = _bkRowIdx++;
+  BK_EDIT_MAP[_idx] = String(b.id);
+  BK_DEL_MAP[_idx]  = String(b.id);
   const end=bookingEndDate(b);
   const isToday=b.start===today();
   const isDueToday=end===today();
@@ -495,12 +500,13 @@ function bookingTableRow(b, actions=true){
     <div class="bk-cell">${typeChips(b.types)}</div>
     <div class="bk-cell">${tags.join(' ')}</div>
     <div class="bk-cell" style="font-size:12px;color:var(--ink3)">${b.notes||'—'}</div>
-    <div class="bk-cell"><div class="bk-actions">${actions?`<button class="btn-icon" data-edit="${b.id}">✎</button><button class="btn-icon del" data-delete="${b.id}">✕</button>`:''}</div></div>
+    <div class="bk-cell"><div class="bk-actions">${actions?`<button class="btn-icon" onclick="editBk(${_idx})">✎</button><button class="btn-icon del" onclick="delBk(${_idx})">✕</button>`:''}</div></div>
   </div>`;
 }
 
 function bookingTable(list, actions=true){
   if(!list.length) return '<div class="empty">No bookings found.</div>';
+  resetBkRowIdx();
   return `<div class="bk-table-wrap">
     <div class="bk-table-head">
       <div class="bk-th">Customer</div>
@@ -985,7 +991,15 @@ function showPage(name, el){
 
 function closeModal(){ document.getElementById('modal').innerHTML=''; }
 
+// Booking index maps - rebuilt on every render, used by edit/delete buttons
+let BK_EDIT_MAP = {};
+let BK_DEL_MAP  = {};
+
+function editBk(idx){ openBookingModal(BK_EDIT_MAP[idx]); }
+function delBk(idx){  deleteBooking(BK_DEL_MAP[idx]); }
+
 // Global click handler for edit/delete buttons using data attributes
+
 document.addEventListener('click', function(e){
   const editBtn = e.target.closest('[data-edit]');
   const delBtn  = e.target.closest('[data-delete]');
