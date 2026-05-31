@@ -878,27 +878,42 @@ function saveBooking(editId){
 
   if(editId){
     const idx=bookings.findIndex(b=>String(b.id)===String(editId));
-    if(idx>=0) bookings[idx]={id:editId,who,phone,start,duration,types,paid,source,notes};
+    if(idx>=0){
+      bookings[idx]={id:String(editId),who,phone,start,duration,types,paid,source,notes};
+      closeModal();
+      renderAll();
+      updateBookingInSheet(bookings[idx]);
+    } else {
+      alert('Could not find booking to update. Try syncing first.');
+    }
   } else {
     const newId = 'BK-' + Date.now().toString().slice(-6);
-    bookings.push({id:newId,who,phone,start,duration,types,paid,source,notes});
-  }
-  closeModal();
-  renderAll();
-  // Write to Google Sheet
-  if(editId){
-    const updatedBk = bookings.find(b=>b.id===editId);
-    if(updatedBk) updateBookingInSheet(updatedBk);
-  } else {
-    const newBk = bookings[bookings.length-1];
-    if(newBk) writeBookingToSheet(newBk);
+    const newBk = {id:newId,who,phone,start,duration,types,paid,source,notes};
+    bookings.push(newBk);
+    closeModal();
+    renderAll();
+    writeBookingToSheet(newBk);
   }
 }
 
 function deleteBooking(id){
   const b=bookings.find(x=>String(x.id)===String(id));
   if(!b) return;
-  if(confirm(`Remove booking for ${b.who}?`)){ bookings=bookings.filter(x=>String(x.id)!==String(id)); renderAll(); }
+  if(confirm(`Remove booking for ${b.who}?`)){
+    bookings=bookings.filter(x=>String(x.id)!==String(id));
+    renderAll();
+    deleteBookingFromSheet(String(id));
+  }
+}
+
+async function deleteBookingFromSheet(bookingId){
+  try {
+    await fetch(APPS_SCRIPT_URL, {
+      method: 'POST',
+      mode: 'no-cors',
+      body: JSON.stringify({ action: 'deleteBooking', bookingId })
+    });
+  } catch(e){ console.warn('Could not delete from sheet:', e.message); }
 }
 
 // ════════════════════════════════════════════════════════════════
