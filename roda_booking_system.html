@@ -390,20 +390,16 @@ function fmtFull(s){ return new Date(s+'T00:00:00').toLocaleDateString('pt-PT',{
 
 function durationDays(dur){
   if(!dur) return 1;
-  // Normalise dashes — Google Sheets may return hyphen instead of en-dash
-  const d = dur.replace(/[-–—]/g, '–').trim();
-  const map={
-    'Full day (10am–6pm)':1,
-    'Full day (10am-6pm)':1,
-    '24 hours':2,
-    '2 days':2,'3 days':3,'4 days':4,'5 days':5,'6 days':6,'7 days':7,
-    'More than 7 days':8
-  };
-  // Try exact match first, then normalised, then extract number
-  if(map[dur]) return map[dur];
-  if(map[d]) return map[d];
-  const n = parseInt(dur);
-  if(!isNaN(n) && n >= 1) return n;
+  const s = dur.toLowerCase().replace(/[–—]/g,'-').trim();
+  // Full day = same day rental, ends same day
+  if(s.includes('full day') || s.includes('10am')) return 1;
+  // 24 hours = spans 2 calendar days (today + tomorrow)
+  if(s.includes('24')) return 2;
+  // "X days" — extract the number
+  const m = s.match(/(\d+)\s*day/);
+  if(m) return parseInt(m[1]);
+  // "more than 7" 
+  if(s.includes('more')) return 8;
   return 1;
 }
 function bookingEndDate(b){ return addDays(b.start, durationDays(b.duration)-1); }
@@ -528,10 +524,11 @@ function renderDashboard(){
   const ready=totalReadyBikes();
   const total=totalBikes();
 
-  // Calculate bikes actually available today (total minus bikes out in active bookings)
+  // Calculate bikes available: total fleet minus bikes on active bookings minus bikes in prep
   const bikesOutToday = active.reduce((s,b)=>s+b.types.reduce((ss,t)=>ss+t.qty,0),0);
   const bikesInPrep   = bikes.filter(b=>b.status==='prep').length;
-  const availableNow  = Math.max(0, total - bikesOutToday - bikesInPrep);
+  const totalFleet    = bikes.filter(b=>b.status!=='removed').length;
+  const availableNow  = Math.max(0, totalFleet - bikesOutToday - bikesInPrep);
 
   // Stats
   document.getElementById('dash-stats').innerHTML=`
@@ -726,7 +723,7 @@ function removeExternal(id){
 // ════════════════════════════════════════════════════════════════
 function openBookingModal(editId){
   if(editId==='null'||editId===undefined) editId=null;
-  const b=editId?bookings.find(x=>x.id===editId):null;
+  const b=editId?bookings.find(x=>String(x.id)===String(editId)):null;
   const t=today();
   typeRowCount=0; // reset so IDs are always 0-based per modal open
   currentEditId=editId||null;
@@ -899,7 +896,7 @@ function saveBooking(editId){
 }
 
 function deleteBooking(id){
-  const b=bookings.find(x=>x.id===id);
+  const b=bookings.find(x=>String(x.id)===String(id));
   if(!b) return;
   if(confirm(`Remove booking for ${b.who}?`)){ bookings=bookings.filter(x=>String(x.id)!==String(id)); renderAll(); }
 }
