@@ -1,0 +1,1263 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>RODA · Booking System</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Syne:wght@600;700;800&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --ink:#0d1a0f;--ink2:#3a4a3c;--ink3:#7a8a7c;
+  --paper:#f5f3ee;--card:#ffffff;--card2:#f0ede6;--card3:#e8e4db;
+  --teal:#009BB5;--teal-d:#007a8f;--teal-l:#e0f6fa;--teal-m:#b3e8f0;
+  --green:#2d7a4f;--green-bg:#e8f5ee;
+  --amber:#c47d0a;--amber-bg:#fef7e6;
+  --red:#c0392b;--red-bg:#fdf0ee;
+  --blue:#1a5fa8;--blue-bg:#eef4fd;
+  --border:rgba(13,26,15,0.10);--border2:rgba(13,26,15,0.18);
+  --shadow:0 1px 3px rgba(0,0,0,0.08),0 4px 16px rgba(0,0,0,0.06);
+  --shadow-lg:0 8px 32px rgba(0,0,0,0.12);
+  --r:10px;--r-lg:16px;
+  --font-head:'Syne',sans-serif;
+  --font-body:'DM Sans',sans-serif;
+  --font-mono:'DM Mono',monospace;
+}
+body{font-family:var(--font-body);background:var(--paper);color:var(--ink);font-size:14px;min-height:100vh;}
+
+
+/* ── CONFIG BANNER ── */
+.cfg-banner{background:#FEF7E6;border-bottom:2px solid #C47D0A;padding:14px 20px;display:flex;gap:14px;align-items:flex-start;}
+.cfg-banner.hidden{display:none;}
+.cfg-icon{font-size:20px;flex-shrink:0;margin-top:2px;}
+.cfg-body{flex:1;}
+.cfg-body strong{color:#C47D0A;font-size:13px;}
+.cfg-fields{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px;}
+.cfg-fields label{display:block;font-size:11px;font-weight:700;color:#7A8A7C;text-transform:uppercase;letter-spacing:.5px;margin-bottom:3px;}
+.cfg-fields input{width:100%;padding:8px 10px;border:0.5px solid rgba(13,26,15,0.2);border-radius:8px;font-size:12px;font-family:'DM Mono',monospace;background:#fff;color:#0d1a0f;}
+.cfg-save{margin-top:10px;padding:7px 18px;background:#C47D0A;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;font-family:'DM Sans',sans-serif;}
+.cfg-note{font-size:11px;color:#7A8A7C;margin-top:6px;line-height:1.5;}
+.sync-bar{background:var(--ink);color:rgba(255,255,255,0.55);font-size:11px;padding:5px 20px;display:flex;align-items:center;gap:8px;}
+.sync-dot{width:7px;height:7px;border-radius:50%;background:#666;flex-shrink:0;}
+.sync-dot.live{background:#1D9E75;}
+.sync-dot.err{background:#c0392b;}
+.sync-dot.loading{background:#C47D0A;animation:pulse 1s ease-in-out infinite;}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.35}}
+@media(max-width:600px){.cfg-fields{grid-template-columns:1fr;}}
+
+/* ── TOPBAR ── */
+.topbar{background:var(--ink);color:#fff;padding:0 24px;height:56px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100;}
+.logo{font-family:var(--font-head);font-size:22px;font-weight:800;letter-spacing:-0.5px;color:#fff;}
+.logo span{color:var(--teal);}
+.topbar-center{display:flex;gap:2px;}
+.nav-btn{background:none;border:none;color:rgba(255,255,255,0.55);font-family:var(--font-body);font-size:13px;font-weight:500;padding:6px 14px;border-radius:6px;cursor:pointer;transition:all .15s;}
+.nav-btn:hover,.nav-btn.active{background:rgba(255,255,255,0.10);color:#fff;}
+.topbar-right{display:flex;align-items:center;gap:10px;}
+.date-chip{font-family:var(--font-mono);font-size:11px;color:rgba(255,255,255,0.5);background:rgba(255,255,255,0.08);padding:4px 10px;border-radius:6px;}
+.btn-add{background:var(--teal);color:#fff;border:none;border-radius:8px;padding:7px 16px;font-size:13px;font-weight:600;cursor:pointer;font-family:var(--font-body);}
+.btn-add:hover{background:var(--teal-d);}
+
+/* ── LAYOUT ── */
+.page{display:none;padding:24px;max-width:1100px;margin:0 auto;}
+.page.active{display:block;}
+
+/* ── SECTION TITLE ── */
+.section-title{font-family:var(--font-head);font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:1.5px;color:var(--ink3);margin-bottom:14px;}
+
+/* ── STAT CARDS ── */
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:24px;}
+.stat-card{background:var(--card);border-radius:var(--r-lg);border:0.5px solid var(--border);padding:16px 20px;}
+.stat-num{font-family:var(--font-head);font-size:32px;font-weight:800;line-height:1;}
+.stat-lbl{font-size:12px;color:var(--ink3);margin-top:4px;font-weight:500;}
+.stat-sub{font-size:11px;color:var(--ink3);margin-top:2px;}
+.stat-card.alert{border-color:#fca5a5;background:var(--red-bg);}
+.stat-card.alert .stat-num{color:var(--red);}
+.stat-card.warn{border-color:#fcd34d;background:var(--amber-bg);}
+.stat-card.warn .stat-num{color:var(--amber);}
+.stat-card.good{border-color:#6ee7b7;background:var(--green-bg);}
+.stat-card.good .stat-num{color:var(--green);}
+
+/* ── ALERT STRIP ── */
+.alert-strip{display:flex;flex-direction:column;gap:8px;margin-bottom:24px;}
+.alert-row{display:flex;align-items:center;gap:12px;padding:10px 16px;border-radius:var(--r);font-size:13px;font-weight:500;}
+.alert-row.red{background:var(--red-bg);border:0.5px solid #fca5a5;color:var(--red);}
+.alert-row.amber{background:var(--amber-bg);border:0.5px solid #fcd34d;color:var(--amber);}
+.alert-row.blue{background:var(--blue-bg);border:0.5px solid #93c5fd;color:var(--blue);}
+.alert-row.green{background:var(--green-bg);border:0.5px solid #6ee7b7;color:var(--green);}
+.alert-row .al-icon{font-size:16px;flex-shrink:0;}
+.alert-row .al-body{flex:1;}
+.alert-row .al-items{margin-top:4px;display:flex;flex-direction:column;gap:3px;}
+.al-item{display:flex;gap:8px;align-items:center;font-weight:400;font-size:12px;opacity:.85;}
+.al-who{font-weight:600;opacity:1;}
+
+/* ── WEEK STRIP ── */
+.week-strip{display:grid;grid-template-columns:repeat(7,1fr);gap:8px;margin-bottom:24px;}
+.day-card{background:var(--card);border:0.5px solid var(--border);border-radius:var(--r);overflow:hidden;}
+.day-card.today{border-color:var(--teal);border-width:1.5px;}
+.day-head{padding:8px 10px 6px;background:var(--card2);}
+.day-wd{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:var(--ink3);}
+.day-dn{font-family:var(--font-head);font-size:20px;font-weight:800;line-height:1;margin-top:1px;}
+.day-card.today .day-dn{color:var(--teal);}
+.day-avail{font-size:10px;font-weight:600;margin-top:2px;}
+.day-avail.ok{color:var(--green);}
+.day-avail.warn{color:var(--amber);}
+.day-avail.full{color:var(--red);font-weight:700;}
+.day-bks{padding:6px 8px;display:flex;flex-direction:column;gap:3px;min-height:40px;}
+.day-bk{font-size:10px;padding:2px 6px;border-radius:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-weight:600;}
+.day-bk.start{background:var(--teal-l);color:var(--teal-d);}
+.day-bk.mid{background:var(--card3);color:var(--ink2);}
+.day-bk.end{background:var(--amber-bg);color:var(--amber);}
+.day-bk.over{background:var(--red-bg);color:var(--red);}
+
+/* ── BOOKINGS TABLE ── */
+.bk-table-wrap{background:var(--card);border-radius:var(--r-lg);border:0.5px solid var(--border);overflow:hidden;margin-bottom:24px;}
+.bk-table-head{display:grid;grid-template-columns:160px 120px 100px 90px 120px 90px 1fr 80px;gap:0;background:var(--card2);border-bottom:0.5px solid var(--border);}
+.bk-th{padding:10px 14px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:var(--ink3);border-right:0.5px solid var(--border);}
+.bk-th:last-child{border-right:none;}
+.bk-row{display:grid;grid-template-columns:160px 120px 100px 90px 120px 90px 1fr 80px;border-bottom:0.5px solid var(--border);transition:background .1s;}
+.bk-row:last-child{border-bottom:none;}
+.bk-row:hover{background:var(--card2);}
+.bk-cell{padding:12px 14px;font-size:13px;display:flex;align-items:center;border-right:0.5px solid var(--border);overflow:hidden;}
+.bk-cell:last-child{border-right:none;}
+.bk-who{font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.bk-source{font-size:11px;color:var(--ink3);}
+.badge{display:inline-flex;align-items:center;padding:2px 8px;border-radius:20px;font-size:11px;font-weight:700;white-space:nowrap;}
+.badge-paid{background:var(--green-bg);color:var(--green);}
+.badge-unpaid{background:var(--amber-bg);color:var(--amber);}
+.badge-conflict{background:var(--red-bg);color:var(--red);}
+.badge-prep{background:var(--blue-bg);color:var(--blue);}
+.bk-dur{font-family:var(--font-mono);font-size:12px;color:var(--ink2);}
+.bk-type-chips{display:flex;gap:4px;flex-wrap:wrap;}
+.type-chip{font-size:10px;padding:2px 7px;border-radius:6px;font-weight:600;background:var(--card3);color:var(--ink2);}
+.btn-icon{background:none;border:0.5px solid var(--border2);border-radius:6px;padding:4px 8px;cursor:pointer;font-size:12px;color:var(--ink2);}
+.btn-icon:hover{background:var(--card2);}
+.btn-icon.del{border-color:#fca5a5;color:var(--red);}
+.bk-actions{display:flex;gap:5px;}
+.bk-phone{font-family:var(--font-mono);font-size:11px;color:var(--teal);text-decoration:none;}
+.bk-phone:hover{text-decoration:underline;}
+
+/* ── INVENTORY GRID ── */
+.inv-section{margin-bottom:28px;}
+.inv-type-header{display:flex;align-items:center;gap:10px;margin-bottom:10px;}
+.inv-type-name{font-family:var(--font-head);font-size:16px;font-weight:700;}
+.inv-type-count{font-size:12px;color:var(--ink3);font-weight:500;}
+.inv-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:10px;}
+.bike-card{background:var(--card);border-radius:var(--r-lg);border:0.5px solid var(--border);padding:16px;position:relative;transition:box-shadow .15s;}
+.bike-card:hover{box-shadow:var(--shadow);}
+.bike-card.out{opacity:.7;border-style:dashed;}
+.bike-card.prep{border-color:#93c5fd;background:var(--blue-bg);}
+.bike-card.external{border-color:var(--teal);background:var(--teal-l);}
+.bike-id{font-family:var(--font-mono);font-size:11px;color:var(--ink3);margin-bottom:6px;}
+.bike-model{font-weight:700;font-size:14px;margin-bottom:2px;}
+.bike-size{font-size:11px;color:var(--ink3);}
+.bike-status{margin-top:10px;}
+.status-dot{display:inline-flex;align-items:center;gap:5px;font-size:12px;font-weight:600;padding:3px 9px;border-radius:20px;}
+.status-ready{background:var(--green-bg);color:var(--green);}
+.status-out{background:var(--red-bg);color:var(--red);}
+.status-prep{background:var(--blue-bg);color:var(--blue);}
+.status-ext{background:var(--teal-l);color:var(--teal-d);}
+.bike-prep-until{font-size:11px;color:var(--blue);margin-top:4px;font-family:var(--font-mono);}
+.bike-card-actions{display:flex;gap:5px;margin-top:10px;}
+.btn-xs{padding:3px 8px;font-size:11px;border:0.5px solid var(--border2);border-radius:6px;background:var(--card);cursor:pointer;font-family:var(--font-body);color:var(--ink2);}
+.btn-xs:hover{background:var(--card2);}
+.btn-xs.teal{background:var(--teal);color:#fff;border-color:transparent;}
+.btn-xs.teal:hover{background:var(--teal-d);}
+.inv-summary-bar{display:flex;gap:16px;margin-bottom:20px;flex-wrap:wrap;}
+.inv-sum-item{background:var(--card);border:0.5px solid var(--border);border-radius:var(--r);padding:10px 16px;display:flex;flex-direction:column;gap:2px;}
+.inv-sum-num{font-family:var(--font-head);font-size:22px;font-weight:800;}
+.inv-sum-lbl{font-size:11px;color:var(--ink3);}
+
+/* ── MODAL ── */
+.modal-backdrop{position:fixed;inset:0;background:rgba(13,26,15,0.5);display:flex;align-items:center;justify-content:center;z-index:500;padding:1rem;backdrop-filter:blur(2px);}
+.modal{background:var(--card);border-radius:var(--r-lg);border:0.5px solid var(--border);padding:28px;width:100%;max-width:500px;max-height:90vh;overflow-y:auto;box-shadow:var(--shadow-lg);}
+.modal h2{font-family:var(--font-head);font-size:20px;font-weight:800;margin-bottom:20px;}
+.fg{margin-bottom:16px;}
+.fg label{display:block;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.7px;color:var(--ink3);margin-bottom:5px;}
+.fg input,.fg select,.fg textarea{width:100%;padding:10px 12px;border:0.5px solid var(--border2);border-radius:var(--r);font-size:14px;font-family:var(--font-body);background:var(--card);color:var(--ink);}
+.fg input:focus,.fg select:focus,.fg textarea:focus{outline:2px solid var(--teal);outline-offset:-1px;border-color:transparent;}
+.fg-row{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+.fg-check{display:flex;align-items:center;gap:8px;font-size:13px;padding:6px 0;}
+.fg-check input[type=checkbox]{width:16px;height:16px;accent-color:var(--teal);}
+.modal-actions{display:flex;gap:8px;justify-content:flex-end;margin-top:20px;padding-top:16px;border-top:0.5px solid var(--border);}
+.btn-cancel{padding:9px 18px;border:0.5px solid var(--border2);border-radius:var(--r);background:var(--card);cursor:pointer;font-size:13px;font-weight:600;color:var(--ink2);}
+.btn-save{padding:9px 22px;background:var(--teal);color:#fff;border:none;border-radius:var(--r);font-size:13px;font-weight:700;cursor:pointer;font-family:var(--font-body);}
+.btn-save:hover{background:var(--teal-d);}
+.avail-pill{display:inline-flex;align-items:center;gap:6px;padding:6px 14px;border-radius:20px;font-size:12px;font-weight:700;margin-bottom:16px;font-family:var(--font-mono);}
+.avail-ok{background:var(--green-bg);color:var(--green);}
+.avail-warn{background:var(--amber-bg);color:var(--amber);}
+.avail-full{background:var(--red-bg);color:var(--red);}
+.conflict-alert{background:var(--red-bg);border:0.5px solid #fca5a5;border-radius:8px;padding:10px 14px;font-size:12px;color:var(--red);margin-bottom:14px;line-height:1.6;display:none;}
+.type-selector{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:6px;}
+.type-opt{border:1.5px solid var(--border2);border-radius:var(--r);padding:8px 10px;cursor:pointer;font-size:12px;font-weight:600;text-align:center;transition:all .15s;}
+.type-opt:hover,.type-opt.selected{border-color:var(--teal);background:var(--teal-l);color:var(--teal-d);}
+.qty-row{display:flex;align-items:center;gap:8px;margin-top:4px;}
+.qty-input{width:60px!important;}
+.qty-avail{font-size:11px;color:var(--ink3);}
+
+/* ── TRANSFER MODAL ── */
+.store-opts{display:flex;flex-direction:column;gap:6px;margin-top:4px;}
+.store-opt{border:1.5px solid var(--border2);border-radius:var(--r);padding:10px 14px;cursor:pointer;transition:all .15s;display:flex;align-items:center;justify-content:space-between;}
+.store-opt:hover,.store-opt.selected{border-color:var(--teal);background:var(--teal-l);}
+.store-opt-name{font-weight:600;font-size:13px;}
+.store-opt-loc{font-size:11px;color:var(--ink3);}
+
+/* ── MISC ── */
+.empty{text-align:center;padding:2rem;color:var(--ink3);font-size:13px;}
+.divider{height:0.5px;background:var(--border);margin:20px 0;}
+.filter-bar{display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap;}
+.filter-sel{font-size:12px;padding:6px 10px;border:0.5px solid var(--border2);border-radius:8px;background:var(--card);color:var(--ink);font-family:var(--font-body);}
+.tag-ext{font-size:10px;background:var(--teal-l);color:var(--teal-d);padding:1px 6px;border-radius:4px;font-weight:700;margin-left:4px;}
+
+@media(max-width:700px){
+  .stats{grid-template-columns:1fr 1fr;}
+  .week-strip{grid-template-columns:repeat(4,1fr);}
+  .bk-table-head,.bk-row{grid-template-columns:140px 90px 1fr 70px;}
+  .bk-th:nth-child(3),.bk-th:nth-child(4),.bk-th:nth-child(5),.bk-cell:nth-child(3),.bk-cell:nth-child(4),.bk-cell:nth-child(5){display:none;}
+  .inv-grid{grid-template-columns:1fr 1fr;}
+  .fg-row{grid-template-columns:1fr;}
+  .topbar-center{display:none;}
+}
+</style>
+</head>
+<body>
+
+<!-- TOPBAR -->
+<div class="topbar">
+  <div class="logo">RODA <span>·</span></div>
+  <div class="topbar-center">
+    <button class="nav-btn active" onclick="showPage('dashboard',this)">Dashboard</button>
+    <button class="nav-btn" onclick="showPage('bookings',this)">Bookings</button>
+    <button class="nav-btn" onclick="showPage('inventory',this)">Inventory</button>
+  </div>
+  <div class="topbar-right">
+    <div class="date-chip" id="date-chip"></div>
+    <button class="btn-add" onclick="openBookingModal()">+ New booking</button>
+  </div>
+</div>
+
+
+<!-- CONFIG BANNER -->
+<div class="cfg-banner" id="cfg-banner">
+  <div class="cfg-icon">⚙️</div>
+  <div class="cfg-body">
+    <strong>Connect to your Google Sheet</strong> — enter your Sheet ID and API key to sync bookings and inventory across all devices.
+    <div class="cfg-fields">
+      <div>
+        <label>Google Sheet ID</label>
+        <input type="text" id="cfg-sheet-id" placeholder="Paste Sheet ID from URL…">
+      </div>
+      <div>
+        <label>Google API Key</label>
+        <input type="text" id="cfg-api-key" placeholder="AIzaSy…">
+      </div>
+    </div>
+    <button class="cfg-save" onclick="saveConfig()">Save &amp; connect</button>
+    <div class="cfg-note">
+      Your credentials are saved in this browser only (localStorage). See the <strong>Setup guide</strong> tab in the Excel file for step-by-step instructions.
+    </div>
+  </div>
+</div>
+
+<!-- SYNC STATUS BAR -->
+<div class="sync-bar" id="sync-bar">
+  <div class="sync-dot" id="sync-dot"></div>
+  <span id="sync-text">Not connected — open Settings to link your Google Sheet</span>
+  <span style="flex:1"></span>
+  <button onclick="toggleCfg()" style="background:none;border:0.5px solid rgba(255,255,255,0.2);border-radius:6px;color:rgba(255,255,255,0.55);font-size:11px;padding:3px 10px;cursor:pointer;">Settings</button>
+  <button onclick="syncFromSheet()" style="background:none;border:0.5px solid rgba(255,255,255,0.2);border-radius:6px;color:rgba(255,255,255,0.55);font-size:11px;padding:3px 10px;cursor:pointer;">↻ Sync now</button>
+</div>
+
+<!-- DASHBOARD -->
+<div id="page-dashboard" class="page active">
+  <div class="stats" id="dash-stats"></div>
+  <div class="alert-strip" id="dash-alerts"></div>
+  <div class="section-title">Next 7 days</div>
+  <div class="week-strip" id="week-strip"></div>
+  <div class="section-title">Committed bookings</div>
+  <div id="dash-bookings"></div>
+</div>
+
+<!-- BOOKINGS -->
+<div id="page-bookings" class="page">
+  <div class="filter-bar">
+    <select class="filter-sel" id="bk-filter" onchange="renderBookingsPage()">
+      <option value="all">All bookings</option>
+      <option value="upcoming">Upcoming</option>
+      <option value="active">Active now</option>
+      <option value="past">Past</option>
+    </select>
+    <select class="filter-sel" id="bk-filter-paid" onchange="renderBookingsPage()">
+      <option value="">Any payment</option>
+      <option value="paid">Paid</option>
+      <option value="unpaid">Unpaid</option>
+    </select>
+  </div>
+  <div id="bookings-page-list"></div>
+</div>
+
+<!-- INVENTORY -->
+<div id="page-inventory" class="page">
+  <div class="inv-summary-bar" id="inv-summary-bar"></div>
+  <button class="btn-add" style="margin-bottom:20px" onclick="openTransferModal()">+ Add bikes from another store</button>
+  <div id="inv-grid"></div>
+</div>
+
+<div id="modal"></div>
+
+<script>
+// ════════════════════════════════════════════════════════════════
+// STATE
+// ════════════════════════════════════════════════════════════════
+const BIKE_TYPES = {
+  'city-ebike':  { label:'City E-Bike',    short:'City',    sizes:['Standard'] },
+  'gravel':      { label:'Gravel',         short:'Gravel',  sizes:['M','L'] },
+  'fat-tyre':    { label:'Fat Tyre',       short:'Fat',     sizes:['Standard'] },
+  'e-touring':   { label:'E-Touring',      short:'Touring', sizes:['S','M'] },
+};
+const DURATIONS = ['Full day (10am–6pm)','24 hours','2 days','3 days','4 days','5 days','6 days','7 days','More than 7 days'];
+const SOURCES   = ['Walk-in','Phone / WhatsApp','Website'];
+const PARTNER_STORES = [
+  { id:'cascais',  name:'RODA Cascais',   loc:'Cascais' },
+  { id:'sintra',   name:'RODA Sintra',    loc:'Sintra' },
+  { id:'setubal',  name:'RODA Setúbal',   loc:'Setúbal' },
+  { id:'porto',    name:'RODA Porto',     loc:'Porto' },
+];
+const PREP_HOURS = 24;
+
+// Initial inventory
+let bikes = [
+  // City E-Bikes: 12 ready, 2 returned today → in 24h prep (ready tomorrow 30/05)
+  ...Array.from({length:12},(_,i)=>({ id:`CE${String(i+1).padStart(2,'0')}`, type:'city-ebike', size:'Standard', status:'ready',  prepUntil:null,         external:false, fromStore:null })),
+  { id:'CE13', type:'city-ebike', size:'Standard', status:'prep', prepUntil:'2026-05-30', external:false, fromStore:null },
+  { id:'CE14', type:'city-ebike', size:'Standard', status:'prep', prepUntil:'2026-05-30', external:false, fromStore:null },
+  // Gravel
+  { id:'GR01', type:'gravel',    size:'M',        status:'ready', prepUntil:null, external:false, fromStore:null },
+  { id:'GR02', type:'gravel',    size:'L',        status:'ready', prepUntil:null, external:false, fromStore:null },
+  // Fat Tyre
+  { id:'FT01', type:'fat-tyre',  size:'Standard', status:'ready', prepUntil:null, external:false, fromStore:null },
+  { id:'FT02', type:'fat-tyre',  size:'Standard', status:'ready', prepUntil:null, external:false, fromStore:null },
+  // E-Touring
+  { id:'ET01', type:'e-touring', size:'S',        status:'ready', prepUntil:null, external:false, fromStore:null },
+  { id:'ET02', type:'e-touring', size:'M',        status:'ready', prepUntil:null, external:false, fromStore:null },
+];
+
+let bookings = [
+  {
+    id:1,
+    who:'Tessa',
+    phone:'',
+    start:'2026-06-02',
+    duration:'Full day (10am–6pm)',
+    types:[{type:'city-ebike',size:'Standard',qty:3}],
+    paid:true,
+    source:'Phone / WhatsApp',
+    notes:'Pickup 11am · Netherlands'
+  },
+  {
+    id:2,
+    who:'Paul I Wen de Bakker',
+    phone:'',
+    start:'2026-06-05',
+    duration:'Full day (10am–6pm)',
+    types:[{type:'city-ebike',size:'Standard',qty:10}],
+    paid:true,
+    source:'Phone / WhatsApp',
+    notes:'Pickup 10am · Netherlands'
+  },
+];
+let nextBkId = 10;
+let nextBikeId = 100;
+let CFG = { sheetId:'', apiKey:'' };
+
+// ════════════════════════════════════════════════════════════════
+// DATE HELPERS
+// ════════════════════════════════════════════════════════════════
+function today(){
+  const d = new Date();
+  // Use local date (not UTC) so Lisbon timezone is correct
+  return d.getFullYear() + '-' +
+    String(d.getMonth()+1).padStart(2,'0') + '-' +
+    String(d.getDate()).padStart(2,'0');
+}
+function addDays(s,n){
+  if(!s||!/^\d{4}-\d{2}-\d{2}$/.test(s)) return s||'';
+  const d=new Date(s+'T12:00:00'); // Use noon to avoid DST/timezone edge cases
+  d.setDate(d.getDate()+n);
+  return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+}
+function fmt(s){ return new Date(s+'T00:00:00').toLocaleDateString('pt-PT',{day:'2-digit',month:'short'}); }
+function fmtFull(s){ return new Date(s+'T00:00:00').toLocaleDateString('pt-PT',{weekday:'short',day:'numeric',month:'short'}); }
+
+function durationDays(dur){
+  if(!dur) return 1;
+  const s = dur.toLowerCase().replace(/[–—]/g,'-').trim();
+  // Full day = same day rental, ends same day
+  if(s.includes('full day') || s.includes('10am')) return 1;
+  // 24 hours = spans 2 calendar days (today + tomorrow)
+  if(s.includes('24')) return 2;
+  // "X days" — extract the number
+  const m = s.match(/(\d+)\s*day/);
+  if(m) return parseInt(m[1]);
+  // "more than 7" 
+  if(s.includes('more')) return 8;
+  return 1;
+}
+function bookingEndDate(b){ return addDays(b.start, durationDays(b.duration)-1); }
+function bookingIsActive(b,date){ return b.start<=date && bookingEndDate(b)>=date; }
+function bookingIsUpcoming(b){ return b.start>today(); } // strictly future, not today
+function bookingIsPast(b){ return bookingEndDate(b)<today(); }
+
+function weekDates(){ return Array.from({length:7},(_,i)=>addDays(today(),i)); }
+
+function totalBikesOfType(type,size,date){
+  // Count bookings that overlap with `date` for this type/size
+  return bookings
+    .filter(b=>bookingIsActive(b,date))
+    .flatMap(b=>b.types)
+    .filter(t=>t.type===type&&t.size===size)
+    .reduce((s,t)=>s+t.qty,0);
+}
+
+function availableByTypeSize(type,size,startDate,endDate,excludeId){
+  // Guard: bail if dates are missing or malformed (e.g. mid-typing)
+  const dateRe=/^\d{4}-\d{2}-\d{2}$/;
+  if(!startDate||!endDate||!dateRe.test(startDate)||!dateRe.test(endDate)){
+    return bikes.filter(b=>b.type===type&&b.size===size&&b.status!=='removed').length;
+  }
+  const totalOwned=bikes.filter(b=>b.type===type&&b.size===size&&b.status!=='removed').length;
+  const dates=[];
+  let d=startDate;
+  let safety=0;
+  while(d<=endDate&&safety<400){dates.push(d);d=addDays(d,1);safety++;}
+  const outCounts=dates.map(date=>{
+    return bookings
+      .filter(b=>b.id!==excludeId&&bookingIsActive(b,date))
+      .flatMap(b=>b.types)
+      .filter(t=>t.type===type&&t.size===size)
+      .reduce((s,t)=>s+t.qty,0);
+  });
+  const maxOut=outCounts.length>0?Math.max(...outCounts):0;
+  return Math.max(0,totalOwned-maxOut);
+}
+
+function totalBikesOnDate(date){
+  return bookings.filter(b=>bookingIsActive(b,date)).flatMap(b=>b.types).reduce((s,t)=>s+t.qty,0);
+}
+function totalReadyBikes(){ return bikes.filter(b=>b.status==='ready').length; }
+function totalBikes(){ return bikes.filter(b=>b.status!=='removed').length; }
+
+// Detect conflicts: bookings where requested > available
+function hasConflict(b){
+  const days=durationDays(b.duration);
+  return b.types.some(t=>{
+    const avail=availableByTypeSize(t.type,t.size,b.start,addDays(b.start,days-1),b.id);
+    return t.qty>avail+t.qty; // re-check including this booking
+  });
+}
+
+function overBookedDates(){
+  return weekDates().filter(d=>{
+    return Object.entries(BIKE_TYPES).some(([type])=>{
+      return Object.values(bikes.filter(b=>b.type===type).reduce((acc,b)=>{ acc[b.size]=(acc[b.size]||0)+1; return acc; },{})).some((owned,i,arr)=>{
+        // simplified: check total bikes out vs total owned
+        return false;
+      });
+    });
+  });
+}
+
+// ════════════════════════════════════════════════════════════════
+// RENDER HELPERS
+// ════════════════════════════════════════════════════════════════
+function typeChips(types){
+  return `<div class="bk-type-chips">${types.map(t=>`<span class="type-chip">${BIKE_TYPES[t.type].short}${t.size!=='Standard'?' '+t.size:''} ×${t.qty}</span>`).join('')}</div>`;
+}
+
+let _bkRowIdx = 0; // reset before each render batch
+function resetBkRowIdx(){ _bkRowIdx = 0; }
+function bookingTableRow(b, actions=true){
+  const _idx = _bkRowIdx++;
+  BK_EDIT_MAP[_idx] = String(b.id);
+  BK_DEL_MAP[_idx]  = String(b.id);
+  const end=bookingEndDate(b);
+  const isToday=b.start===today();
+  const isDueToday=end===today();
+  const isDueTom=end===addDays(today(),1);
+  const isPast=bookingIsPast(b);
+  const tags=[];
+  if(b.paid) tags.push('<span class="badge badge-paid">Paid</span>');
+  else tags.push('<span class="badge badge-unpaid">Unpaid</span>');
+  if(isDueToday) tags.push('<span class="badge badge-prep">Due today</span>');
+  if(isDueTom)   tags.push('<span class="badge badge-prep" style="background:var(--amber-bg);color:var(--amber)">Due tomorrow</span>');
+
+  return `<div class="bk-row" style="${isPast?'opacity:.5':''}">
+    <div class="bk-cell"><div><div class="bk-who">${b.who}</div><div class="bk-source">${b.source}</div>${b.phone?`<a class="bk-phone" href="tel:${b.phone}">${b.phone}</a>`:''}</div></div>
+    <div class="bk-cell"><div><div style="font-weight:600">${fmt(b.start)}</div><div class="bk-source">${end!==b.start?'→ '+fmt(end):''}</div></div></div>
+    <div class="bk-cell"><span class="bk-dur">${b.duration}</span></div>
+    <div class="bk-cell">${typeChips(b.types)}</div>
+    <div class="bk-cell">${tags.join(' ')}</div>
+    <div class="bk-cell" style="font-size:12px;color:var(--ink3)">${b.notes||'—'}</div>
+    <div class="bk-cell"><div class="bk-actions">${actions?`<button class="btn-icon" onclick="editBk(${_idx})">✎</button><button class="btn-icon del" onclick="delBk(${_idx})">✕</button>`:''}</div></div>
+  </div>`;
+}
+
+function bookingTable(list, actions=true){
+  if(!list.length) return '<div class="empty">No bookings found.</div>';
+  resetBkRowIdx();
+  return `<div class="bk-table-wrap">
+    <div class="bk-table-head">
+      <div class="bk-th">Customer</div>
+      <div class="bk-th">Date</div>
+      <div class="bk-th">Duration</div>
+      <div class="bk-th">Bikes</div>
+      <div class="bk-th">Payment</div>
+      <div class="bk-th">Notes</div>
+      <div class="bk-th"></div>
+    </div>
+    ${list.map(b=>bookingTableRow(b,actions)).join('')}
+  </div>`;
+}
+
+// ════════════════════════════════════════════════════════════════
+// DASHBOARD
+// ════════════════════════════════════════════════════════════════
+function renderDashboard(){
+  const t=today();
+  const active=bookings.filter(b=>bookingIsActive(b,t));
+  const upcoming=bookings.filter(bookingIsUpcoming);
+  const dueToday=bookings.filter(b=>bookingEndDate(b)===t);
+  const dueTom=bookings.filter(b=>bookingEndDate(b)===addDays(t,1));
+  const ready=totalReadyBikes();
+  const total=totalBikes();
+
+  // Calculate bikes available: total fleet minus bikes on active bookings minus bikes in prep
+  const bikesOutToday = active.reduce((s,b)=>s+b.types.reduce((ss,t)=>ss+t.qty,0),0);
+  const bikesInPrep   = bikes.filter(b=>b.status==='prep').length;
+  const totalFleet    = bikes.filter(b=>b.status!=='removed').length;
+  const availableNow  = Math.max(0, totalFleet - bikesOutToday - bikesInPrep);
+
+  // Stats
+  document.getElementById('dash-stats').innerHTML=`
+    <div class="stat-card ${active.length?'':'good'}">
+      <div class="stat-num">${active.length}</div>
+      <div class="stat-lbl">Active rentals</div>
+      <div class="stat-sub">${bikesOutToday} bike${bikesOutToday!==1?'s':''} out today</div>
+    </div>
+    <div class="stat-card ${dueToday.length?'alert':'good'}">
+      <div class="stat-num">${dueToday.length}</div>
+      <div class="stat-lbl">Due back today</div>
+      <div class="stat-sub">${dueToday.reduce((s,b)=>s+b.types.reduce((ss,t)=>ss+t.qty,0),0)} bikes returning</div>
+    </div>
+    <div class="stat-card ${upcoming.length?'warn':'good'}">
+      <div class="stat-num">${upcoming.length}</div>
+      <div class="stat-lbl">Upcoming bookings</div>
+      <div class="stat-sub">Next 7 days</div>
+    </div>
+    <div class="stat-card ${availableNow<3?'warn':'good'}">
+      <div class="stat-num">${availableNow}</div>
+      <div class="stat-lbl">Bikes ready to rent</div>
+      <div class="stat-sub">of ${total} total${bikesInPrep>0?' · '+bikesInPrep+' in prep':''}</div>
+    </div>`;
+
+  // Alerts
+  const parts=[];
+  if(dueToday.length){
+    parts.push(`<div class="alert-row red"><span class="al-icon">🔴</span>
+      <div class="al-body"><div>Due back <strong>today</strong> — ${dueToday.length} booking${dueToday.length>1?'s':''}</div>
+      <div class="al-items">${dueToday.map(b=>`<div class="al-item"><span class="al-who">${b.who}</span><span>·</span><span>${b.types.map(t=>`${t.qty}× ${BIKE_TYPES[t.type].short}`).join(', ')}</span><span>·</span><a class="bk-phone" href="tel:${b.phone}">${b.phone}</a></div>`).join('')}</div>
+      </div></div>`);
+  }
+  if(dueTom.length){
+    parts.push(`<div class="alert-row amber"><span class="al-icon">🟡</span>
+      <div class="al-body"><div>Due back <strong>tomorrow</strong> — ${dueTom.length} booking${dueTom.length>1?'s':''}</div>
+      <div class="al-items">${dueTom.map(b=>`<div class="al-item"><span class="al-who">${b.who}</span><span>·</span><span>${b.types.map(t=>`${t.qty}× ${BIKE_TYPES[t.type].short}`).join(', ')}</span><span>·</span><a class="bk-phone" href="tel:${b.phone}">${b.phone}</a></div>`).join('')}</div>
+      </div></div>`);
+  }
+  // Upcoming this week
+  const weekBks=bookings.filter(b=>b.start>t&&b.start<=addDays(t,7));
+  if(weekBks.length){
+    parts.push(`<div class="alert-row blue"><span class="al-icon">📅</span>
+      <div class="al-body"><div><strong>${weekBks.length} booking${weekBks.length>1?'s':''}</strong> starting in the next 7 days</div>
+      <div class="al-items">${weekBks.sort((a,b)=>a.start.localeCompare(b.start)).map(b=>`<div class="al-item"><span class="al-who">${b.who}</span><span>·</span><span>${fmtFull(b.start)}</span><span>·</span><span>${b.duration}</span><span>·</span><span>${b.types.map(t=>`${t.qty}× ${BIKE_TYPES[t.type].short}`).join(', ')}</span>${!b.paid?'<span style="color:var(--amber);font-weight:600">· Unpaid</span>':''}</div>`).join('')}</div>
+      </div></div>`);
+  }
+  const unpaid=bookings.filter(b=>!b.paid&&!bookingIsPast(b));
+  if(unpaid.length){
+    parts.push(`<div class="alert-row amber"><span class="al-icon">💳</span>
+      <div class="al-body"><div><strong>${unpaid.length} unpaid</strong> reservation${unpaid.length>1?'s':''} — confirm payment before bike handover</div>
+      <div class="al-items">${unpaid.map(b=>`<div class="al-item"><span class="al-who">${b.who}</span><span>·</span><span>${fmt(b.start)}</span><span>·</span><a class="bk-phone" href="tel:${b.phone}">${b.phone}</a></div>`).join('')}</div>
+      </div></div>`);
+  }
+  const prepBikes=bikes.filter(b=>b.status==='prep');
+  if(prepBikes.length){
+    parts.push(`<div class="alert-row blue"><span class="al-icon">🔧</span>
+      <div class="al-body"><div><strong>${prepBikes.length} bike${prepBikes.length>1?'s':''} in 24h prep</strong> — charging &amp; review</div>
+      <div class="al-items">${prepBikes.map(b=>`<div class="al-item"><span class="al-who">${b.id}</span><span>·</span><span>${BIKE_TYPES[b.type].label} ${b.size!=='Standard'?b.size:''}</span>${b.prepUntil?`<span>· Ready ${fmt(b.prepUntil)}</span>`:''}</div>`).join('')}</div>
+      </div></div>`);
+  }
+  if(!parts.length) parts.push(`<div class="alert-row green"><span class="al-icon">✅</span><div class="al-body">All clear — no urgent alerts today</div></div>`);
+  document.getElementById('dash-alerts').innerHTML=parts.join('');
+
+  // Week strip
+  const dates=weekDates();
+  document.getElementById('week-strip').innerHTML=dates.map(d=>{
+    const bksOnDay=bookings.filter(b=>bookingIsActive(b,d));
+    const bikesOut=bksOnDay.reduce((s,b)=>s+b.types.reduce((ss,t)=>ss+t.qty,0),0);
+    const avail=total-bikesOut;
+    const isT=d===t;
+    const {weekday,day}={weekday:new Date(d+'T00:00:00').toLocaleDateString('en-GB',{weekday:'short'}),day:new Date(d+'T00:00:00').getDate()};
+    const availCls=avail<=0?'full':avail<=3?'warn':'ok';
+    const availLbl=avail<=0?'Full':avail<=3?`${avail} left`:`${avail} free`;
+    const bkHtml=bksOnDay.slice(0,3).map(b=>{
+      const isStart=b.start===d;
+      const isEnd=bookingEndDate(b)===d;
+      const cls=isStart?'start':isEnd?'end':'mid';
+      return `<div class="day-bk ${cls}">${b.who.split(' ')[0]} ×${b.types.reduce((s,t)=>s+t.qty,0)}</div>`;
+    }).join('')+(bksOnDay.length>3?`<div class="day-bk mid">+${bksOnDay.length-3} more</div>`:'');
+    return `<div class="day-card ${isT?'today':''}">
+      <div class="day-head">
+        <div class="day-wd">${weekday}</div>
+        <div class="day-dn">${day}</div>
+        <div class="day-avail ${availCls}">${availLbl}</div>
+      </div>
+      <div class="day-bks">${bkHtml}</div>
+    </div>`;
+  }).join('');
+
+  // Committed bookings (upcoming + active)
+  const committed=bookings.filter(b=>!bookingIsPast(b)).sort((a,b)=>a.start.localeCompare(b.start));
+  document.getElementById('dash-bookings').innerHTML=bookingTable(committed);
+}
+
+// ════════════════════════════════════════════════════════════════
+// BOOKINGS PAGE
+// ════════════════════════════════════════════════════════════════
+function renderBookingsPage(){
+  const filter=document.getElementById('bk-filter').value;
+  const paid=document.getElementById('bk-filter-paid').value;
+  const t=today();
+  let list=bookings.slice();
+  if(filter==='upcoming') list=list.filter(bookingIsUpcoming);
+  if(filter==='active')   list=list.filter(b=>bookingIsActive(b,t));
+  if(filter==='past')     list=list.filter(bookingIsPast);
+  if(paid==='paid')   list=list.filter(b=>b.paid);
+  if(paid==='unpaid') list=list.filter(b=>!b.paid);
+  list.sort((a,b)=>a.start.localeCompare(b.start));
+  document.getElementById('bookings-page-list').innerHTML=bookingTable(list);
+}
+
+// ════════════════════════════════════════════════════════════════
+// INVENTORY PAGE
+// ════════════════════════════════════════════════════════════════
+function renderInventory(){
+  // Summary bar
+  const t=today();
+  const ready=bikes.filter(b=>b.status==='ready').length;
+  const out=bikes.filter(b=>b.status==='out').length;
+  const prep=bikes.filter(b=>b.status==='prep').length;
+  const ext=bikes.filter(b=>b.external).length;
+  document.getElementById('inv-summary-bar').innerHTML=`
+    <div class="inv-sum-item"><div class="inv-sum-num" style="color:var(--green)">${ready}</div><div class="inv-sum-lbl">Ready to rent</div></div>
+    <div class="inv-sum-item"><div class="inv-sum-num" style="color:var(--red)">${out}</div><div class="inv-sum-lbl">Currently out</div></div>
+    <div class="inv-sum-item"><div class="inv-sum-num" style="color:var(--blue)">${prep}</div><div class="inv-sum-lbl">In 24h prep</div></div>
+    <div class="inv-sum-item"><div class="inv-sum-num" style="color:var(--teal-d)">${ext}</div><div class="inv-sum-lbl">From other stores</div></div>
+    <div class="inv-sum-item"><div class="inv-sum-num">${ready+out+prep}</div><div class="inv-sum-lbl">Total in Lisbon</div></div>`;
+
+  // Grouped by type
+  const sections=Object.entries(BIKE_TYPES).map(([type,info])=>{
+    const typeBikes=bikes.filter(b=>b.type===type);
+    if(!typeBikes.length) return '';
+    const cards=typeBikes.map(b=>{
+      const statMap={ready:'status-ready',out:'status-out',prep:'status-prep'};
+      const statLbl={ready:'✓ Ready',out:'⬆ Out',prep:'⏳ Prep (24h)'};
+      const isExt=b.external;
+      return `<div class="bike-card ${b.status} ${isExt?'external':''}">
+        <div class="bike-id">${b.id}${isExt?`<span class="tag-ext">${b.fromStore}</span>`:''}</div>
+        <div class="bike-model">${info.label}</div>
+        <div class="bike-size">${b.size!=='Standard'?'Size '+b.size:'Standard'}</div>
+        <div class="bike-status"><span class="status-dot ${statMap[b.status]||'status-ready'}">${statLbl[b.status]||'Ready'}</span></div>
+        ${b.prepUntil?`<div class="bike-prep-until">Ready ${fmt(b.prepUntil)}</div>`:''}
+        <div class="bike-card-actions">
+          ${b.status==='out'?`<button class="btn-xs" onclick="markReturned('${b.id}')">Returned</button>`:''}
+          ${b.status==='prep'?`<button class="btn-xs teal" onclick="markReady('${b.id}')">Mark ready</button>`:''}
+          ${b.status==='ready'?`<button class="btn-xs" onclick="markOut('${b.id}')">Mark out</button>`:''}
+          ${isExt?`<button class="btn-xs" style="color:var(--red)" onclick="removeExternal('${b.id}')">Remove</button>`:''}
+        </div>
+      </div>`;
+    }).join('');
+    return `<div class="inv-section">
+      <div class="inv-type-header">
+        <div class="inv-type-name">${info.label}</div>
+        <div class="inv-type-count">${typeBikes.filter(b=>b.status==='ready').length} ready / ${typeBikes.length} total</div>
+      </div>
+      <div class="inv-grid">${cards}</div>
+    </div>`;
+  }).join('');
+  document.getElementById('inv-grid').innerHTML=sections;
+}
+
+function markReturned(id){
+  const b=bikes.find(x=>x.id===id);
+  if(!b) return;
+  b.status='prep';
+  b.prepUntil=addDays(today(),1);
+  renderAll();
+  updateBikeInSheet(id,'prep',b.prepUntil);
+}
+function markReady(id){
+  const b=bikes.find(x=>x.id===id);
+  if(!b) return;
+  b.status='ready'; b.prepUntil=null;
+  renderAll();
+  updateBikeInSheet(id,'ready','');
+}
+function markOut(id){
+  const b=bikes.find(x=>x.id===id);
+  if(!b) return;
+  b.status='out';
+  renderAll();
+  updateBikeInSheet(id,'out','');
+}
+function removeExternal(id){
+  if(!confirm('Remove this bike from Lisbon inventory?')) return;
+  bikes=bikes.filter(x=>x.id!==id);
+  renderAll();
+}
+
+// ════════════════════════════════════════════════════════════════
+// BOOKING MODAL
+// ════════════════════════════════════════════════════════════════
+function openBookingModal(editId){
+  if(editId==='null'||editId===undefined) editId=null;
+  const b=editId?bookings.find(x=>String(x.id)===String(editId)):null;
+  const t=today();
+  typeRowCount=0; // reset so IDs are always 0-based per modal open
+  currentEditId=editId||null;
+  const srcOpts=SOURCES.map(s=>`<option${b&&b.source===s?' selected':''}>${s}</option>`).join('');
+  const durOpts=DURATIONS.map(d=>`<option${b&&b.duration===d?' selected':''}>${d}</option>`).join('');
+
+  // Build type rows
+  const typeRows=b?b.types:[];
+  const initialRows=typeRows.length
+    ?typeRows.map(tr=>{ const html=typeRowHtml(typeRowCount,tr); typeRowCount++; return html; }).join('')
+    :(()=>{ const html=typeRowHtml(0,null); typeRowCount=1; return html; })();
+
+  document.getElementById('modal').innerHTML=`
+    <div class="modal-backdrop" onclick="if(event.target===this)closeModal()">
+      <div class="modal">
+        <h2>${b?'Edit booking':'New booking'}</h2>
+        <div id="bk-avail-pill" class="avail-pill avail-ok">— Check dates to see availability</div>
+        <div id="bk-conflict" class="conflict-alert"></div>
+
+        <div class="fg"><label>Customer name</label>
+          <input type="text" id="bk-who" value="${b?b.who:''}" placeholder="Full name or group name"></div>
+        <div class="fg"><label>Phone / WhatsApp</label>
+          <input type="text" id="bk-phone" value="${b?b.phone:''}" placeholder="+351 9xx xxx xxx"></div>
+        <div class="fg-row">
+          <div class="fg"><label>Start date</label>
+            <input type="date" id="bk-start" value="${b?b.start:t}" onchange="checkBkAvail(${editId||'null'})"></div>
+          <div class="fg"><label>Duration</label>
+            <select id="bk-dur" onchange="checkBkAvail(${editId||'null'})">${durOpts}</select></div>
+        </div>
+
+        <div class="fg"><label>Bikes requested</label>
+          <div id="bk-type-rows">${initialRows}</div>
+          <button type="button" onclick="addTypeRow()" style="margin-top:8px;font-size:12px;background:none;border:none;color:var(--teal);cursor:pointer;font-weight:600;">+ Add another bike type</button>
+        </div>
+
+        <div class="fg-row">
+          <div class="fg"><label>Source</label><select id="bk-source">${srcOpts}</select></div>
+          <div class="fg" style="display:flex;align-items:flex-end;padding-bottom:4px">
+            <div class="fg-check"><input type="checkbox" id="bk-paid" ${b&&b.paid?'checked':''}><label for="bk-paid" style="text-transform:none;letter-spacing:0;font-size:13px;font-weight:500">Paid in advance</label></div>
+          </div>
+        </div>
+        <div class="fg"><label>Notes</label>
+          <input type="text" id="bk-notes" value="${b?b.notes:''}" placeholder="Meeting point, special requests…"></div>
+
+        <div class="modal-actions">
+          <button class="btn-cancel" onclick="closeModal()">Cancel</button>
+          <button class="btn-save" onclick="saveBooking(${editId||'null'})">${b?'Save changes':'Confirm booking'}</button>
+        </div>
+      </div>
+    </div>`;
+
+  if(b) checkBkAvail(editId);
+}
+
+let typeRowCount=0;
+function typeRowHtml(i, existing){
+  const typeOpts=Object.entries(BIKE_TYPES).map(([k,v])=>`<option value="${k}" ${existing&&existing.type===k?'selected':''}>${v.label}</option>`).join('');
+  return `<div id="type-row-${i}" style="display:grid;grid-template-columns:1fr 70px 50px 24px;gap:6px;margin-bottom:6px;align-items:end;">
+    <div><select class="tr-type" data-row="${i}" onchange="updateSizeOpts(${i})" style="width:100%;padding:8px 10px;border:0.5px solid var(--border2);border-radius:var(--r);font-size:13px;background:var(--card);color:var(--ink)">${typeOpts}</select></div>
+    <div><select class="tr-size" data-row="${i}" id="tr-size-${i}" style="width:100%;padding:8px 10px;border:0.5px solid var(--border2);border-radius:var(--r);font-size:13px;background:var(--card);color:var(--ink)">${sizeOptsFor(existing?existing.type:'city-ebike',existing?existing.size:null)}</select></div>
+    <div><input type="number" class="tr-qty" data-row="${i}" value="${existing?existing.qty:1}" min="1" max="${totalBikes()}" onchange="checkBkAvail(currentEditId)" style="width:100%;padding:8px 10px;border:0.5px solid var(--border2);border-radius:var(--r);font-size:13px;background:var(--card);color:var(--ink)"></div>
+    <button type="button" onclick="removeTypeRow(${i})" style="background:none;border:none;color:var(--ink3);cursor:pointer;font-size:16px;line-height:1;padding:0">×</button>
+  </div>`;
+}
+function sizeOptsFor(type,selected){
+  return BIKE_TYPES[type].sizes.map(s=>`<option${s===selected?' selected':''}>${s}</option>`).join('');
+}
+function updateSizeOpts(i){
+  const type=document.querySelector(`.tr-type[data-row="${i}"]`).value;
+  document.getElementById(`tr-size-${i}`).innerHTML=sizeOptsFor(type,null);
+  checkBkAvail(currentEditId);
+}
+function addTypeRow(){
+  const container=document.getElementById('bk-type-rows');
+  const div=document.createElement('div');
+  const html=typeRowHtml(typeRowCount,null);
+  typeRowCount++;
+  div.innerHTML=html;
+  container.appendChild(div.firstChild);
+  checkBkAvail(currentEditId);
+}
+function removeTypeRow(i){ const el=document.getElementById(`type-row-${i}`); if(el) el.remove(); }
+
+let currentEditId=null;
+function checkBkAvail(editId){
+  if(editId==='null'||editId===undefined) editId=null;
+  currentEditId=editId;
+  const start=document.getElementById('bk-start')?.value;
+  const dur=document.getElementById('bk-dur')?.value;
+  if(!start||!dur||!/^\d{4}-\d{2}-\d{2}$/.test(start)) return;
+  const days=durationDays(dur);
+  const end=addDays(start,days-1);
+  const rows=getTypeRows();
+  let ok=true;
+  let msg='';
+  rows.forEach(r=>{
+    const avail=availableByTypeSize(r.type,r.size,start,end,editId);
+    if(r.qty>avail){
+      ok=false;
+      msg+=`⚠ Only <strong>${avail}</strong> ${BIKE_TYPES[r.type].label}${r.size!=='Standard'?' '+r.size:''} available (${r.qty} requested).<br>`;
+    }
+  });
+  const pill=document.getElementById('bk-avail-pill');
+  const alert=document.getElementById('bk-conflict');
+  if(!ok){
+    pill.className='avail-pill avail-full';
+    pill.textContent='Availability conflict on selected dates';
+    alert.style.display='';
+    alert.innerHTML=msg+'Check the Inventory page or add bikes from another store.';
+  } else {
+    const bikesOut=rows.reduce((s,r)=>s+r.qty,0);
+    pill.className='avail-pill avail-ok';
+    pill.textContent=`✓ ${bikesOut} bike${bikesOut!==1?'s':''} available for ${fmt(start)}${days>1?' → '+fmt(end):''}`;
+    alert.style.display='none';
+  }
+}
+
+function getTypeRows(){
+  const rows=[];
+  document.querySelectorAll('.tr-type').forEach(el=>{
+    const i=el.dataset.row;
+    const type=el.value;
+    const size=document.querySelector(`.tr-size[data-row="${i}"]`)?.value||'Standard';
+    const qty=parseInt(document.querySelector(`.tr-qty[data-row="${i}"]`)?.value)||1;
+    rows.push({type,size,qty});
+  });
+  return rows;
+}
+
+function saveBooking(editId){
+  if(editId==='null'||editId===undefined) editId=null;
+  const who=document.getElementById('bk-who').value.trim();
+  const phone=document.getElementById('bk-phone').value.trim();
+  const start=document.getElementById('bk-start').value;
+  const duration=document.getElementById('bk-dur').value;
+  const source=document.getElementById('bk-source').value;
+  const paid=document.getElementById('bk-paid').checked;
+  const notes=document.getElementById('bk-notes').value.trim();
+  const types=getTypeRows().filter(r=>r.qty>0);
+
+  if(!who){ alert('Please enter a customer name.'); return; }
+  if(!start){ alert('Please select a start date.'); return; }
+  if(!types.length){ alert('Please add at least one bike type.'); return; }
+
+  // Conflict check
+  const days=durationDays(duration);
+  const end=addDays(start,days-1);
+  const conflicts=types.filter(r=>r.qty>availableByTypeSize(r.type,r.size,start,end,editId));
+  if(conflicts.length){
+    if(!confirm(`⚠ Not enough ${conflicts.map(r=>BIKE_TYPES[r.type].label).join(', ')} available.\nSave anyway?`)) return;
+  }
+
+  if(editId){
+    const idx=bookings.findIndex(b=>String(b.id)===String(editId));
+    if(idx>=0){
+      bookings[idx]={id:String(editId),who,phone,start,duration,types,paid,source,notes};
+      closeModal();
+      renderAll();
+      updateBookingInSheet(bookings[idx]);
+    } else {
+      alert('Could not find booking to update. Try syncing first.');
+    }
+  } else {
+    const newId = 'BK-' + Date.now().toString().slice(-6);
+    const newBk = {id:newId,who,phone,start,duration,types,paid,source,notes};
+    bookings.push(newBk);
+    closeModal();
+    renderAll();
+    writeBookingToSheet(newBk);
+  }
+}
+
+function deleteBooking(id){
+  const b=bookings.find(x=>String(x.id)===String(id));
+  if(!b) return;
+  if(confirm(`Remove booking for ${b.who}?`)){
+    bookings=bookings.filter(x=>String(x.id)!==String(id));
+    renderAll();
+    deleteBookingFromSheet(String(id));
+  }
+}
+
+async function deleteBookingFromSheet(bookingId){
+  try {
+    await fetch(APPS_SCRIPT_URL, {
+      method: 'POST',
+      mode: 'no-cors',
+      body: JSON.stringify({ action: 'deleteBooking', bookingId })
+    });
+  } catch(e){ console.warn('Could not delete from sheet:', e.message); }
+}
+
+// ════════════════════════════════════════════════════════════════
+// TRANSFER MODAL
+// ════════════════════════════════════════════════════════════════
+function openTransferModal(){
+  const typeOpts=Object.entries(BIKE_TYPES).map(([k,v])=>`<option value="${k}">${v.label}</option>`).join('');
+  const storeOpts=PARTNER_STORES.map(s=>`<option value="${s.id}">${s.name} — ${s.loc}</option>`).join('');
+  document.getElementById('modal').innerHTML=`
+    <div class="modal-backdrop" onclick="if(event.target===this)closeModal()">
+      <div class="modal">
+        <h2>Add bikes from another store</h2>
+        <div class="fg"><label>Partner store</label><select id="tr-store">${storeOpts}</select></div>
+        <div class="fg-row">
+          <div class="fg"><label>Bike type</label><select id="tr-type" onchange="updateTransferSizes()">${typeOpts}</select></div>
+          <div class="fg"><label>Size</label><select id="tr-size2">${sizeOptsFor('city-ebike',null)}</select></div>
+        </div>
+        <div class="fg"><label>Quantity</label><input type="number" id="tr-qty" value="1" min="1" max="10" style="width:80px"></div>
+        <div class="fg"><label>Available from</label><input type="date" id="tr-from" value="${today()}"></div>
+        <div class="modal-actions">
+          <button class="btn-cancel" onclick="closeModal()">Cancel</button>
+          <button class="btn-save" onclick="confirmTransfer()">Add to Lisbon inventory</button>
+        </div>
+      </div>
+    </div>`;
+}
+function updateTransferSizes(){
+  const type=document.getElementById('tr-type').value;
+  document.getElementById('tr-size2').innerHTML=sizeOptsFor(type,null);
+}
+function confirmTransfer(){
+  const storeId=document.getElementById('tr-store').value;
+  const store=PARTNER_STORES.find(s=>s.id===storeId);
+  const type=document.getElementById('tr-type').value;
+  const size=document.getElementById('tr-size2').value;
+  const qty=parseInt(document.getElementById('tr-qty').value)||1;
+  const from=document.getElementById('tr-from').value;
+  const prefix=type==='city-ebike'?'CE':type==='gravel'?'GR':type==='fat-tyre'?'FT':'ET';
+  for(let i=0;i<qty;i++){
+    bikes.push({
+      id:`${prefix}-EXT${nextBikeId++}`,
+      type,size,
+      status:'ready',
+      prepUntil:null,
+      external:true,
+      fromStore:store.name,
+      availFrom:from
+    });
+  }
+  closeModal();
+  renderAll();
+  showPage('inventory', document.querySelector('.nav-btn:nth-child(3)'));
+}
+
+// ════════════════════════════════════════════════════════════════
+// NAVIGATION
+// ════════════════════════════════════════════════════════════════
+function showPage(name, el){
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));
+  document.getElementById('page-'+name).classList.add('active');
+  if(el) el.classList.add('active');
+  if(name==='bookings') renderBookingsPage();
+  if(name==='inventory') renderInventory();
+}
+
+function closeModal(){ document.getElementById('modal').innerHTML=''; }
+
+// Booking index maps - rebuilt on every render, used by edit/delete buttons
+let BK_EDIT_MAP = {};
+let BK_DEL_MAP  = {};
+
+function editBk(idx){ openBookingModal(BK_EDIT_MAP[idx]); }
+function delBk(idx){  deleteBooking(BK_DEL_MAP[idx]); }
+
+// Global click handler for edit/delete buttons using data attributes
+
+document.addEventListener('click', function(e){
+  const editBtn = e.target.closest('[data-edit]');
+  const delBtn  = e.target.closest('[data-delete]');
+  if(editBtn){ openBookingModal(editBtn.getAttribute('data-edit')); }
+  if(delBtn){  deleteBooking(delBtn.getAttribute('data-delete')); }
+});
+
+function renderAll(){
+  renderDashboard();
+  renderBookingsPage();
+  renderInventory();
+  // Update date
+  const now=new Date();
+  document.getElementById('date-chip').textContent=now.toLocaleDateString('pt-PT',{weekday:'short',day:'numeric',month:'short',year:'numeric'});
+}
+
+// Auto-flip prep → ready for any bike whose prepUntil is today or earlier
+function autoReleasePrepBikes(){
+  const t = today();
+  bikes.forEach(b => {
+    if(b.status === 'prep' && b.prepUntil && b.prepUntil <= t){
+      b.status = 'ready';
+      b.prepUntil = null;
+    }
+  });
+}
+
+autoReleasePrepBikes();
+renderAll();
+
+// ════════════════════════════════════════════════════════════════
+// GOOGLE SHEETS SYNC
+// ════════════════════════════════════════════════════════════════
+const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzyGxtdAnqkfMjtkIEw4rZgrQ4dkPDrhrb7z8A0V1ataXTS6d8opUgTjE95a8rUcHBs/exec";
+const SHEET_BOOKINGS  = "Bookings!A4:K500";
+const SHEET_BIKES_RNG = "Bikes!A4:F50";
+const APPEND_BK_RNG   = "Bookings!A4";
+
+
+function lsGet(k){ try{ return localStorage.getItem(k)||''; }catch(e){ return ''; } }
+function lsSet(k,v){ try{ localStorage.setItem(k,v); }catch(e){} }
+
+function loadConfig(){
+  CFG.sheetId = lsGet('roda_sheet_id');
+  CFG.apiKey  = lsGet('roda_api_key');
+  const sid = document.getElementById('cfg-sheet-id');
+  const sak = document.getElementById('cfg-api-key');
+  if(sid) sid.value = CFG.sheetId;
+  if(sak) sak.value = CFG.apiKey;
+  if(CFG.sheetId && CFG.apiKey){
+    document.getElementById('cfg-banner').classList.add('hidden');
+    syncFromSheet();
+  }
+}
+
+function saveConfig(){
+  const sid = document.getElementById('cfg-sheet-id');
+  const sak = document.getElementById('cfg-api-key');
+  if(!sid || !sak){ alert('Could not find config fields. Please refresh and try again.'); return; }
+  CFG.sheetId = sid.value.trim();
+  CFG.apiKey  = sak.value.trim();
+  if(!CFG.sheetId || !CFG.apiKey){ alert('Please enter both the Sheet ID and the API Key.'); return; }
+  lsSet('roda_sheet_id', CFG.sheetId);
+  lsSet('roda_api_key',  CFG.apiKey);
+  document.getElementById('cfg-banner').classList.add('hidden');
+  setSync('loading', 'Connecting to Google Sheet…');
+  syncFromSheet();
+}
+
+function toggleCfg(){
+  document.getElementById('cfg-banner').classList.toggle('hidden');
+}
+
+function setSync(state, msg){
+  document.getElementById('sync-dot').className = 'sync-dot ' + state;
+  document.getElementById('sync-text').textContent = msg;
+}
+
+function sheetsGet(range){
+  const url = `https://sheets.googleapis.com/v4/spreadsheets/${CFG.sheetId}/values/${encodeURIComponent(range)}?key=${CFG.apiKey}`;
+  return fetch(url).then(r=>{ if(!r.ok) throw new Error('HTTP '+r.status); return r.json(); });
+}
+
+function sheetsAppend(range, values){
+  const url = `https://sheets.googleapis.com/v4/spreadsheets/${CFG.sheetId}/values/${encodeURIComponent(range)}:append?valueInputOption=USER_ENTERED&key=${CFG.apiKey}`;
+  return fetch(url,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({values})})
+    .then(r=>{ if(!r.ok) throw new Error('HTTP '+r.status); return r.json(); });
+}
+
+function sheetsBatchUpdate(data){
+  const url = `https://sheets.googleapis.com/v4/spreadsheets/${CFG.sheetId}/values:batchUpdate?key=${CFG.apiKey}`;
+  return fetch(url,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({valueInputOption:'USER_ENTERED',data})})
+    .then(r=>{ if(!r.ok) throw new Error('HTTP '+r.status); return r.json(); });
+}
+
+function isoDate(s){
+  if(!s) return '';
+  s = String(s).trim();
+  // Already YYYY-MM-DD
+  if(/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
+  // DD/MM/YYYY
+  const m1 = s.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+  if(m1) return `${m1[3]}-${m1[2]}-${m1[1]}`;
+  // M/D/YYYY or MM/DD/YYYY (Google Sheets US format)
+  const m2 = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+  if(m2) return `${m2[3]}-${String(m2[1]).padStart(2,'0')}-${String(m2[2]).padStart(2,'0')}`;
+  // D/M/YYYY or DD/MM/YYYY (European with single digits)
+  const m3 = s.match(/^(\d{1,2})-(\d{1,2})-(\d{4})$/);
+  if(m3) return `${m3[3]}-${String(m3[2]).padStart(2,'0')}-${String(m3[1]).padStart(2,'0')}`;
+  // Excel/Sheets serial number
+  const n=parseInt(s);
+  if(!isNaN(n)&&n>40000){ const d=new Date((n-25569)*86400*1000); return d.toISOString().slice(0,10); }
+  // Try native Date parse as last resort
+  const d = new Date(s);
+  if(!isNaN(d.getTime())) return d.toISOString().slice(0,10);
+  return s;
+}
+
+async function syncFromSheet(){
+  if(!CFG.sheetId || !CFG.apiKey){ setSync('','Not connected'); return; }
+  setSync('loading','Syncing with Google Sheet...');
+  try {
+    const [bData, bikData] = await Promise.all([
+      sheetsGet(SHEET_BOOKINGS),
+      sheetsGet(SHEET_BIKES_RNG)
+    ]);
+
+    // Parse bikes: A=ID, B=Type, C=Size, D=Status, E=PrepDate, F=Notes
+    const parsedBikes = (bikData.values||[]).filter(r=>r[0]).map(r=>({
+      id: r[0]||'',
+      type: r[1]||'city-ebike',
+      size: r[2]||'Standard',
+      status: (r[3]||'ready').toLowerCase(),
+      prepUntil: isoDate(r[4]||''),
+      external: false,
+      fromStore: r[5]||''
+    }));
+    if(parsedBikes.length > 0) bikes = parsedBikes;
+
+    // Parse bookings: A=ID, B=Who, C=Phone, D=Start, E=Duration,
+    //                 F=CityQty, G=GravelQty, H=FatQty, I=TouringQty, J=Paid, K=Notes
+    let idCtr = 200;
+    console.log('Raw bookings from sheet:', JSON.stringify(bData.values||[]));
+    const seenIds = new Set();
+    const parsedBk = (bData.values||[]).filter(r=>r[1]).map((r, rowIdx)=>{
+      let rowId = r[0] || ('BK-R'+rowIdx);
+      // If ID is missing, numeric only, or duplicate, generate a unique one
+      if(!rowId || rowId === '10' || rowId === '0' || seenIds.has(rowId)){
+        rowId = 'BK-R' + rowIdx;
+      }
+      seenIds.add(rowId);
+      const types=[];
+      const cq=parseInt(r[5])||0, gq=parseInt(r[6])||0, fq=parseInt(r[7])||0, tq=parseInt(r[8])||0;
+      if(cq>0) types.push({type:'city-ebike', size:'Standard', qty:cq});
+      if(gq>0) types.push({type:'gravel',     size:'Standard', qty:gq});
+      if(fq>0) types.push({type:'fat-tyre',   size:'Standard', qty:fq});
+      if(tq>0) types.push({type:'e-touring',  size:'Standard', qty:tq});
+      return {
+        id: rowId,
+        who: r[1]||'', phone: r[2]||'',
+        start: isoDate(r[3]||''),
+        duration: r[4]||'Full day (10am\u20136pm)',
+        types: types.length ? types : [{type:'city-ebike',size:'Standard',qty:1}],
+        paid: (r[9]||'').toUpperCase()==='YES',
+        source: 'Phone / WhatsApp',
+        notes: r[10]||''
+      };
+    });
+    if(parsedBk.length > 0) bookings = parsedBk;
+
+    console.log('Parsed bookings:', JSON.stringify(parsedBk.map(b=>({id:b.id,who:b.who,start:b.start,dur:b.duration,end:bookingEndDate(b)}))));
+    console.log('Today:', today());
+    autoReleasePrepBikes();
+    const t = new Date().toLocaleTimeString('pt-PT',{hour:'2-digit',minute:'2-digit'});
+    setSync('live', `Live \u00b7 Google Sheet \u00b7 last sync ${t}`);
+    renderAll();
+  } catch(e){
+    if(window.location.protocol === 'file:'){
+      setSync('err', 'Open via local server — see instructions below');
+      showFileProtocolWarning();
+    } else {
+      setSync('err', 'Sync failed: ' + e.message);
+    }
+    console.error('Sheets sync error:', e);
+  }
+}
+
+function showFileProtocolWarning(){
+  const existing = document.getElementById('file-protocol-warning');
+  if(existing) return;
+  const div = document.createElement('div');
+  div.id = 'file-protocol-warning';
+  div.style.cssText = 'background:#FDF0EE;border:2px solid #C0392B;border-radius:10px;padding:16px 20px;margin:16px 24px;font-size:13px;color:#C0392B;line-height:1.7;';
+  div.innerHTML = `<strong>⚠ Google Sheets sync requires a local server</strong><br>
+    Chrome blocks network requests from files opened directly (file://). Fix in 30 seconds:<br><br>
+    <strong>Option 1 — Python (easiest):</strong><br>
+    1. Open Terminal / Command Prompt in the folder with this HTML file<br>
+    2. Run: <code style="background:#fff;padding:2px 6px;border-radius:4px;">python -m http.server 8000</code><br>
+    3. Open: <code style="background:#fff;padding:2px 6px;border-radius:4px;">http://localhost:8000/roda_booking_system.html</code><br><br>
+    <strong>Option 2 — VS Code:</strong> Install the "Live Server" extension → right-click the file → Open with Live Server`;
+  const main = document.querySelector('.page.active') || document.body;
+  main.insertBefore(div, main.firstChild);
+}
+
+async function updateBookingInSheet(b){
+  // Find the row in the sheet by Booking ID and update it entirely
+  const cq = b.types.find(t=>t.type==='city-ebike')?.qty || 0;
+  const gq = b.types.find(t=>t.type==='gravel')?.qty    || 0;
+  const fq = b.types.find(t=>t.type==='fat-tyre')?.qty  || 0;
+  const tq = b.types.find(t=>t.type==='e-touring')?.qty || 0;
+  const row = [b.id, b.who, b.phone, b.start, b.duration, cq, gq, fq, tq, b.paid?'YES':'NO', b.notes];
+  try {
+    await fetch(APPS_SCRIPT_URL, {
+      method: 'POST',
+      mode: 'no-cors',
+      body: JSON.stringify({ action: 'updateBooking', bookingId: b.id, row })
+    });
+    setSync('live', 'Updated in Google Sheet ✓');
+  } catch(e){
+    setSync('err', 'Update failed: ' + e.message);
+  }
+}
+
+async function writeBookingToSheet(b){
+  const cq = b.types.find(t=>t.type==='city-ebike')?.qty || 0;
+  const gq = b.types.find(t=>t.type==='gravel')?.qty    || 0;
+  const fq = b.types.find(t=>t.type==='fat-tyre')?.qty  || 0;
+  const tq = b.types.find(t=>t.type==='e-touring')?.qty || 0;
+  const row = [b.id, b.who, b.phone, b.start, b.duration, cq, gq, fq, tq, b.paid?'YES':'NO', b.notes];
+  try {
+    await fetch(APPS_SCRIPT_URL, {
+      method: 'POST',
+      mode: 'no-cors',
+      body: JSON.stringify({ action: 'addBooking', row })
+    });
+    setSync('live', 'Saved to Google Sheet ✓');
+  } catch(e){
+    setSync('err', 'Save failed: ' + e.message);
+    alert('Could not save to Google Sheet:\n' + e.message + '\n\nBooking saved locally for this session only.');
+  }
+}
+
+async function updateBikeInSheet(bikeId, status, prepUntil){
+  try {
+    await fetch(APPS_SCRIPT_URL, {
+      method: 'POST',
+      mode: 'no-cors',
+      body: JSON.stringify({ action: 'updateBike', bikeId, status, prepUntil: prepUntil||'' })
+    });
+  } catch(e){ console.warn('Could not update bike in sheet:', e.message); }
+}
+
+// Auto-refresh every 60 seconds when connected
+setInterval(()=>{ if(CFG.sheetId && CFG.apiKey) syncFromSheet(); }, 60000);
+
+// Load saved credentials and connect
+loadConfig();
+
+</script>
+</body>
+</html>
