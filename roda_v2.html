@@ -273,7 +273,8 @@ body{font-family:var(--font-body);background:var(--paper);color:var(--ink);font-
 <!-- DASHBOARD -->
 <div id="page-dashboard" class="page active">
   <div class="stats" id="dash-stats"></div>
-  <div class="alert-strip" id="dash-alerts"></div>
+  <div class="stats" id="dash-type-avail" style="margin-top:8px;margin-bottom:0"></div>
+  <div class="alert-strip" id="dash-alerts" style="margin-top:16px"></div>
   <div class="section-title">Next 7 days</div>
   <div class="week-strip" id="week-strip"></div>
   <div class="section-title">Committed bookings</div>
@@ -527,13 +528,38 @@ function renderDashboard(){
   const ready=totalReadyBikes();
   const total=totalBikes();
 
-  // Calculate bikes available: total fleet minus bikes on active bookings minus bikes in prep
+  // Per-type availability helper
+  function availByType(type, date){
+    const owned = bikes.filter(b=>b.type===type && b.status!=='removed');
+    const inPrep = owned.filter(b=>b.status==='prep' && (!b.prepUntil || b.prepUntil > date)).length;
+    const outQty = bookings
+      .filter(b=>bookingIsActive(b,date))
+      .flatMap(b=>b.types)
+      .filter(t=>t.type===type)
+      .reduce((s,t)=>s+t.qty,0);
+    return Math.max(0, owned.length - inPrep - outQty);
+  }
+
   const bikesOutToday = active.reduce((s,b)=>s+b.types.reduce((ss,t)=>ss+t.qty,0),0);
   const bikesInPrep   = bikes.filter(b=>b.status==='prep').length;
   const totalFleet    = bikes.filter(b=>b.status!=='removed').length;
   const availableNow  = Math.max(0, totalFleet - bikesOutToday - bikesInPrep);
 
-  // Stats
+  // Per-type counts for today
+  const typeAvail = {
+    'city-ebike': availByType('city-ebike', t),
+    'gravel':     availByType('gravel', t),
+    'fat-tyre':   availByType('fat-tyre', t),
+    'e-touring':  availByType('e-touring', t),
+  };
+  const typeTotal = {
+    'city-ebike': bikes.filter(b=>b.type==='city-ebike'&&b.status!=='removed').length,
+    'gravel':     bikes.filter(b=>b.type==='gravel'&&b.status!=='removed').length,
+    'fat-tyre':   bikes.filter(b=>b.type==='fat-tyre'&&b.status!=='removed').length,
+    'e-touring':  bikes.filter(b=>b.type==='e-touring'&&b.status!=='removed').length,
+  };
+
+  // Stats — top row
   document.getElementById('dash-stats').innerHTML=`
     <div class="stat-card ${active.length?'':'good'}">
       <div class="stat-num">${active.length}</div>
@@ -553,8 +579,22 @@ function renderDashboard(){
     <div class="stat-card ${availableNow<3?'warn':'good'}">
       <div class="stat-num">${availableNow}</div>
       <div class="stat-lbl">Bikes ready to rent</div>
-      <div class="stat-sub">of ${total} total${bikesInPrep>0?' · '+bikesInPrep+' in prep':''}</div>
+      <div class="stat-sub">of ${totalFleet} total${bikesInPrep>0?' · '+bikesInPrep+' in prep':''}</div>
     </div>`;
+
+  // Per-type availability row
+  document.getElementById('dash-type-avail').innerHTML=
+    Object.entries(typeAvail).map(([type,avail])=>{
+      const tot = typeTotal[type];
+      if(tot===0) return '';
+      const info = BIKE_TYPES[type];
+      const cls = avail===0?'alert':avail<tot*0.5?'warn':'good';
+      return `<div class="stat-card ${cls}" style="flex:1;min-width:120px">
+        <div class="stat-num" style="font-size:22px">${avail}<span style="font-size:13px;font-weight:400;color:var(--ink3)">/${tot}</span></div>
+        <div class="stat-lbl">${info.label}</div>
+        <div class="stat-sub">${avail===0?'None available':avail===tot?'All available':avail+' of '+tot+' free'}</div>
+      </div>`;
+    }).join('');
 
   // Alerts
   const parts=[];
@@ -599,24 +639,34 @@ function renderDashboard(){
   const dates=weekDates();
   document.getElementById('week-strip').innerHTML=dates.map(d=>{
     const bksOnDay=bookings.filter(b=>bookingIsActive(b,d));
-    const bikesOut=bksOnDay.reduce((s,b)=>s+b.types.reduce((ss,t)=>ss+t.qty,0),0);
-    const avail=total-bikesOut;
     const isT=d===t;
     const {weekday,day}={weekday:new Date(d+'T00:00:00').toLocaleDateString('en-GB',{weekday:'short'}),day:new Date(d+'T00:00:00').getDate()};
-    const availCls=avail<=0?'full':avail<=3?'warn':'ok';
-    const availLbl=avail<=0?'Full':avail<=3?`${avail} left`:`${avail} free`;
-    const bkHtml=bksOnDay.slice(0,3).map(b=>{
+
+    // Per-type availability for this day
+    const dayTypeAvail = Object.entries(BIKE_TYPES).map(([type,info])=>{
+      const tot = bikes.filter(b=>b.type===type&&b.status!=='removed').length;
+      if(tot===0) return '';
+      const av = availByType(type, d);
+      const dot = av===0?'#E24B4A':av<tot?'#C47D0A':'#2d7a4f';
+      return `<div style="display:flex;align-items:center;gap:3px;font-size:10px;">
+        <span style="width:7px;height:7px;border-radius:50%;background:${dot};flex-shrink:0"></span>
+        <span style="color:var(--ink3)">${info.short}</span>
+        <span style="font-weight:700;color:${av===0?'var(--red)':av<tot?'var(--amber)':'var(--ink)'};">${av}/${tot}</span>
+      </div>`;
+    }).join('');
+
+    const bkHtml=bksOnDay.slice(0,2).map(b=>{
       const isStart=b.start===d;
       const isEnd=bookingEndDate(b)===d;
       const cls=isStart?'start':isEnd?'end':'mid';
       return `<div class="day-bk ${cls}">${b.who.split(' ')[0]} ×${b.types.reduce((s,t)=>s+t.qty,0)}</div>`;
-    }).join('')+(bksOnDay.length>3?`<div class="day-bk mid">+${bksOnDay.length-3} more</div>`:'');
+    }).join('')+(bksOnDay.length>2?`<div class="day-bk mid">+${bksOnDay.length-2} more</div>`:'');
     return `<div class="day-card ${isT?'today':''}">
       <div class="day-head">
         <div class="day-wd">${weekday}</div>
         <div class="day-dn">${day}</div>
-        <div class="day-avail ${availCls}">${availLbl}</div>
       </div>
+      <div style="padding:5px 8px;display:flex;flex-direction:column;gap:3px;border-bottom:0.5px solid var(--border)">${dayTypeAvail}</div>
       <div class="day-bks">${bkHtml}</div>
     </div>`;
   }).join('');
