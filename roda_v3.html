@@ -944,6 +944,7 @@ function getTypeRows(){
 function saveBooking(){
   let editId = currentEditId || null;
   console.log('saveBooking called, currentEditId:', currentEditId, 'editId:', editId);
+  console.log('Type rows found:', document.querySelectorAll('.tr-type').length);
   const who=document.getElementById('bk-who').value.trim();
   const phone=document.getElementById('bk-phone').value.trim();
   const country=document.getElementById('bk-country').value.trim();
@@ -1121,7 +1122,7 @@ renderAll();
 // ════════════════════════════════════════════════════════════════
 // GOOGLE SHEETS SYNC
 // ════════════════════════════════════════════════════════════════
-const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzyGxtdAnqkfMjtkIEw4rZgrQ4dkPDrhrb7z8A0V1ataXTS6d8opUgTjE95a8rUcHBs/exec";
+const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbw2N8J01h9Lafu-tOPPXqxawNVosoO9y9xMLRTICHStgGzlsCfnJMwgEhGt-Sgyuppt/exec";
 const SHEET_BOOKINGS  = "Bookings!A4:K500";
 const SHEET_BIKES_RNG = "Bikes!A4:F50";
 const APPEND_BK_RNG   = "Bookings!A4";
@@ -1372,8 +1373,11 @@ async function updateBikeInSheet(bikeId, status, prepUntil){
   } catch(e){ console.warn('Could not update bike in sheet:', e.message); }
 }
 
-// Auto-refresh every 60 seconds when connected
-setInterval(()=>{ if(CFG.sheetId && CFG.apiKey) syncFromSheet(); }, 60000);
+// Auto-refresh every 60 seconds when connected — pause if modal is open
+setInterval(()=>{
+  const modalOpen = document.getElementById('modal')?.innerHTML?.trim().length > 0;
+  if(CFG.sheetId && CFG.apiKey && !modalOpen) syncFromSheet();
+}, 60000);
 
 // Load saved credentials and connect
 loadConfig();
