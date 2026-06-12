@@ -1123,7 +1123,7 @@ renderAll();
 // GOOGLE SHEETS SYNC
 // ════════════════════════════════════════════════════════════════
 const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbw2N8J01h9Lafu-tOPPXqxawNVosoO9y9xMLRTICHStgGzlsCfnJMwgEhGt-Sgyuppt/exec";
-const SHEET_BOOKINGS  = "Bookings!A4:K500";
+const SHEET_BOOKINGS  = "Bookings!A4:P500";
 const SHEET_BIKES_RNG = "Bikes!A4:F50";
 const APPEND_BK_RNG   = "Bookings!A4";
 
@@ -1257,11 +1257,11 @@ async function syncFromSheet(){
         paidSumup=(r[9]||'').toUpperCase()==='YES'?1:0; paidCash=0;
         notes=r[10]||'';
       } else {
-        // NEW FORMAT
+        // NEW FORMAT — pad row to 16 cols since Sheets API trims trailing empty cells
+        while(r.length < 16) r.push('');
         who=r[1]||''; phone=r[2]||''; country=r[3]||'';
-        start=isoDate(r[4]||''); 
+        start=isoDate(r[4]||'');
         pickupTime=r[5]||''; dropoffTime=r[6]||'';
-        // Clean up Google Sheets date serial artifacts
         if(start==='1899-12-30'||start==='1899-12-29') start='';
         if(pickupTime==='1899-12-30') pickupTime='';
         if(dropoffTime==='1899-12-30') dropoffTime='';
