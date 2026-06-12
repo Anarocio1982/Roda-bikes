@@ -1238,23 +1238,37 @@ async function syncFromSheet(){
         rowId = 'BK-R' + rowIdx;
       }
       seenIds.add(rowId);
-      // Sheet columns (new format with Country inserted at D):
-      // A=ID, B=Who, C=Phone, D=Country, E=Start, F=Pickup, G=Dropoff,
-      // H=Duration, I=City, J=Gravel, K=Fat, L=Touring, M=SumUp, N=Cash, O=Total, P=Notes
-      const who         = r[1]||'';
-      const phone       = r[2]||'';
-      const country     = r[3]||'';
-      const start       = isoDate(r[4]||'');
-      const pickupTime  = r[5]||'';
-      const dropoffTime = r[6]||'';
-      const duration    = r[7]||'Full day (10am–6pm)';
-      const cq          = parseInt(r[8])||0;
-      const gq          = parseInt(r[9])||0;
-      const fq          = parseInt(r[10])||0;
-      const tq          = parseInt(r[11])||0;
-      const paidSumup   = parseFloat(r[12])||0;
-      const paidCash    = parseFloat(r[13])||0;
-      const notes       = r[15]||'';
+
+      // Per-row format detection: if column D looks like a date => old format
+      // Old: ID,Who,Phone,START,Duration,City,Gravel,Fat,Touring,Paid,Notes
+      // New: ID,Who,Phone,Country,START,Pickup,Dropoff,Duration,City,Gravel,Fat,Touring,SumUp,Cash,Total,Notes
+      const r3 = String(r[3]||'').trim();
+      const r3isDate = /^\d{4}-\d{2}-\d{2}$/.test(isoDate(r3));
+
+      let who,phone,country,start,pickupTime,dropoffTime,duration,cq,gq,fq,tq,paidSumup,paidCash,notes;
+
+      if(r3isDate){
+        // OLD FORMAT
+        who=r[1]||''; phone=r[2]||''; country='';
+        start=isoDate(r[3]); pickupTime=''; dropoffTime='';
+        duration=r[4]||'Full day (10am–6pm)';
+        cq=parseInt(r[5])||0; gq=parseInt(r[6])||0; fq=parseInt(r[7])||0; tq=parseInt(r[8])||0;
+        paidSumup=(r[9]||'').toUpperCase()==='YES'?1:0; paidCash=0;
+        notes=r[10]||'';
+      } else {
+        // NEW FORMAT
+        who=r[1]||''; phone=r[2]||''; country=r[3]||'';
+        start=isoDate(r[4]||''); 
+        pickupTime=r[5]||''; dropoffTime=r[6]||'';
+        // Clean up Google Sheets date serial artifacts
+        if(start==='1899-12-30'||start==='1899-12-29') start='';
+        if(pickupTime==='1899-12-30') pickupTime='';
+        if(dropoffTime==='1899-12-30') dropoffTime='';
+        duration=r[7]||'Full day (10am–6pm)';
+        cq=parseInt(r[8])||0; gq=parseInt(r[9])||0; fq=parseInt(r[10])||0; tq=parseInt(r[11])||0;
+        paidSumup=parseFloat(r[12])||0; paidCash=parseFloat(r[13])||0;
+        notes=r[15]||'';
+      }
 
       const types=[];
       if(cq>0) types.push({type:'city-ebike',size:'Standard',qty:cq});
