@@ -1239,40 +1239,25 @@ async function syncFromSheet(){
       }
       seenIds.add(rowId);
 
-      // Smart column detection: find which column holds the date
-      // New format: ID,Who,Phone,Country,Date,Pickup,Dropoff,Dur,City,Gravel,Fat,Tour,Sumup,Cash,Total,Notes
-      // Old format: ID,Who,Phone,Date,Dur,City,Gravel,Fat,Tour,Paid,Notes
-      const r3date = /^\d{4}-\d{2}-\d{2}$/.test(isoDate(r[3]||''));
-      const r4date = /^\d{4}-\d{2}-\d{2}$/.test(isoDate(r[4]||''));
-      const isNew  = !r3date && r4date;  // date in col E = new format
-      const isOld  = r3date;              // date in col D = old format
+      // Fixed column order (new fields appended at end, never inserted in middle):
+      // A=ID, B=Who, C=Phone, D=Start, E=Duration, F=City, G=Gravel, H=Fat, I=Touring,
+      // J=Paid(legacy), K=Notes, L=Country, M=Pickup, N=Dropoff, O=SumUp, P=Cash, Q=Total
+      const who        = r[1]||'';
+      const phone      = r[2]||'';
+      const start      = isoDate(r[3]||'');
+      const duration   = r[4]||'Full day (10am–6pm)';
+      const cq         = parseInt(r[5])||0;
+      const gq         = parseInt(r[6])||0;
+      const fq         = parseInt(r[7])||0;
+      const tq         = parseInt(r[8])||0;
+      const legacyPaid = (r[9]||'').toUpperCase()==='YES';
+      const notes      = r[10]||'';
+      const country    = r[11]||'';
+      const pickupTime = r[12]||'';
+      const dropoffTime= r[13]||'';
+      const paidSumup  = parseFloat(r[14])||0;
+      const paidCash   = parseFloat(r[15])||0;
 
-      let who,phone,country,start,pickupTime,dropoffTime,duration,cq,gq,fq,tq,paidSumup,paidCash,notes;
-      if(isNew){
-        who=r[1]||''; phone=r[2]||''; country=r[3]||'';
-        start=isoDate(r[4]||''); pickupTime=r[5]||''; dropoffTime=r[6]||'';
-        duration=r[7]||'Full day (10am–6pm)';
-        cq=parseInt(r[8])||0; gq=parseInt(r[9])||0; fq=parseInt(r[10])||0; tq=parseInt(r[11])||0;
-        paidSumup=parseFloat(r[12])||0; paidCash=parseFloat(r[13])||0;
-        notes=r[15]||'';
-      } else {
-        // Old format OR row with empty country and empty date col E
-        // If neither col has a date, try col D as date anyway
-        who=r[1]||''; phone=r[2]||''; country='';
-        start=isoDate(r[3]||'') || isoDate(r[4]||'');
-        pickupTime=r[5]||''; dropoffTime=r[6]||'';
-        // If old format, duration is in col E; if ambiguous, check both
-        duration = r3date ? (r[4]||'Full day (10am–6pm)') : (r[7]||r[4]||'Full day (10am–6pm)');
-        if(r3date){
-          cq=parseInt(r[5])||0; gq=parseInt(r[6])||0; fq=parseInt(r[7])||0; tq=parseInt(r[8])||0;
-          paidSumup=(r[9]||'').toUpperCase()==='YES'?1:0; paidCash=0;
-          notes=r[10]||'';
-        } else {
-          cq=parseInt(r[8])||0; gq=parseInt(r[9])||0; fq=parseInt(r[10])||0; tq=parseInt(r[11])||0;
-          paidSumup=parseFloat(r[12])||0; paidCash=parseFloat(r[13])||0;
-          notes=r[15]||'';
-        }
-      }
       const types=[];
       if(cq>0) types.push({type:'city-ebike',size:'Standard',qty:cq});
       if(gq>0) types.push({type:'gravel',size:'Standard',qty:gq});
@@ -1281,7 +1266,7 @@ async function syncFromSheet(){
       return {
         id:rowId, who, phone, country, start, pickupTime, dropoffTime, duration,
         types: types.length?types:[{type:'city-ebike',size:'Standard',qty:1}],
-        paid: paidSumup>0||paidCash>0, paidSumup, paidCash,
+        paid: paidSumup>0||paidCash>0||legacyPaid, paidSumup, paidCash,
         source:'Phone / WhatsApp', notes
       };
     });
@@ -1326,9 +1311,10 @@ async function updateBookingInSheet(b){
   const gq = b.types.find(t=>t.type==='gravel')?.qty    || 0;
   const fq = b.types.find(t=>t.type==='fat-tyre')?.qty  || 0;
   const tq = b.types.find(t=>t.type==='e-touring')?.qty || 0;
-  const row = [b.id, b.who, b.phone, b.country||'', b.start, b.pickupTime||'', b.dropoffTime||'',
-               b.duration, cq, gq, fq, tq,
-               b.paidSumup||0, b.paidCash||0, (b.paidSumup||0)+(b.paidCash||0), b.notes];
+  const row = [b.id, b.who, b.phone, b.start, b.duration, cq, gq, fq, tq,
+               (b.paidSumup>0||b.paidCash>0)?'YES':'NO', b.notes,
+               b.country||'', b.pickupTime||'', b.dropoffTime||'',
+               b.paidSumup||0, b.paidCash||0, (b.paidSumup||0)+(b.paidCash||0)];
   try {
     await fetch(APPS_SCRIPT_URL, {
       method: 'POST',
@@ -1346,9 +1332,11 @@ async function writeBookingToSheet(b){
   const gq = b.types.find(t=>t.type==='gravel')?.qty    || 0;
   const fq = b.types.find(t=>t.type==='fat-tyre')?.qty  || 0;
   const tq = b.types.find(t=>t.type==='e-touring')?.qty || 0;
-  const row = [b.id, b.who, b.phone, b.country||'', b.start, b.pickupTime||'', b.dropoffTime||'',
-               b.duration, cq, gq, fq, tq,
-               b.paidSumup||0, b.paidCash||0, (b.paidSumup||0)+(b.paidCash||0), b.notes];
+  // Column order: ID,Who,Phone,Start,Dur,City,Gravel,Fat,Touring,Paid,Notes,Country,Pickup,Dropoff,SumUp,Cash,Total
+  const row = [b.id, b.who, b.phone, b.start, b.duration, cq, gq, fq, tq,
+               (b.paidSumup>0||b.paidCash>0)?'YES':'NO', b.notes,
+               b.country||'', b.pickupTime||'', b.dropoffTime||'',
+               b.paidSumup||0, b.paidCash||0, (b.paidSumup||0)+(b.paidCash||0)];
   try {
     await fetch(APPS_SCRIPT_URL, {
       method: 'POST',
