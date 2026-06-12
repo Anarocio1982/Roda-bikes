@@ -1239,7 +1239,11 @@ async function syncFromSheet(){
       }
       seenIds.add(rowId);
       const col3 = r[3]||'';
-      const isNewFormat = r.length >= 12 && !col3.match(/^\d{4}-\d{2}-\d{2}$/) && isNaN(parseFloat(col3)) && col3 !== 'YES' && col3 !== 'NO';
+      const col4 = r[4]||'';
+      // New format: date is in col E (r[4]). Old format: date is in col D (r[3])
+      const col4isDate = /^\d{4}-\d{2}-\d{2}$/.test(isoDate(col4));
+      const col3isDate = /^\d{4}-\d{2}-\d{2}$/.test(isoDate(col3));
+      const isNewFormat = col4isDate && !col3isDate;
       let who,phone,country,start,pickupTime,dropoffTime,duration,cq,gq,fq,tq,paidSumup,paidCash,notes;
       if(isNewFormat){
         who=r[1]||''; phone=r[2]||''; country=r[3]||'';
