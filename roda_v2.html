@@ -347,26 +347,20 @@ let bikes = [
 
 let bookings = [
   {
-    id:1,
-    who:'Tessa',
-    phone:'',
-    start:'2026-06-02',
+    id:1, who:'Tessa', phone:'', start:'2026-06-02',
     duration:'Full day (10am–6pm)',
     types:[{type:'city-ebike',size:'Standard',qty:3}],
-    paid:true,
-    source:'Phone / WhatsApp',
-    notes:'Pickup 11am · Netherlands'
+    paidSumup:0, paidCash:0, country:'Netherlands',
+    pickupTime:'11:00', dropoffTime:'18:00',
+    source:'Phone / WhatsApp', notes:''
   },
   {
-    id:2,
-    who:'Paul I Wen de Bakker',
-    phone:'',
-    start:'2026-06-05',
+    id:2, who:'Paul I Wen de Bakker', phone:'', start:'2026-06-05',
     duration:'Full day (10am–6pm)',
     types:[{type:'city-ebike',size:'Standard',qty:10}],
-    paid:true,
-    source:'Phone / WhatsApp',
-    notes:'Pickup 10am · Netherlands'
+    paidSumup:0, paidCash:0, country:'Netherlands',
+    pickupTime:'10:00', dropoffTime:'18:00',
+    source:'Phone / WhatsApp', notes:''
   },
 ];
 let nextBkId = 10;
@@ -484,14 +478,20 @@ function bookingTableRow(b, actions=true){
   const isDueTom=end===addDays(today(),1);
   const isPast=bookingIsPast(b);
   const tags=[];
-  if(b.paid) tags.push('<span class="badge badge-paid">Paid</span>');
-  else tags.push('<span class="badge badge-unpaid">Unpaid</span>');
+  const sumup = b.paidSumup||0;
+  const cash  = b.paidCash||0;
+  const total = sumup+cash;
+  if(sumup>0) tags.push(`<span class="badge badge-paid">SumUp €${sumup.toFixed(0)}</span>`);
+  if(cash>0)  tags.push(`<span class="badge badge-unpaid" style="background:var(--blue-bg);color:var(--blue-text)">Cash €${cash.toFixed(0)}</span>`);
+  if(total>0) tags.push(`<span class="badge" style="background:var(--card2);color:var(--ink2)">Total €${total.toFixed(0)}</span>`);
+  if(total===0) tags.push('<span class="badge badge-unpaid">Unpaid</span>');
+  if(b.country) tags.push(`<span class="badge" style="background:var(--card2);color:var(--ink3)">${b.country}</span>`);
   if(isDueToday) tags.push('<span class="badge badge-prep">Due today</span>');
   if(isDueTom)   tags.push('<span class="badge badge-prep" style="background:var(--amber-bg);color:var(--amber)">Due tomorrow</span>');
 
   return `<div class="bk-row" style="${isPast?'opacity:.5':''}">
     <div class="bk-cell"><div><div class="bk-who">${b.who}</div><div class="bk-source">${b.source}</div>${b.phone?`<a class="bk-phone" href="tel:${b.phone}">${b.phone}</a>`:''}</div></div>
-    <div class="bk-cell"><div><div style="font-weight:600">${fmt(b.start)}</div><div class="bk-source">${end!==b.start?'→ '+fmt(end):''}</div></div></div>
+    <div class="bk-cell"><div><div style="font-weight:600">${fmt(b.start)}</div><div class="bk-source">${end!==b.start?'→ '+fmt(end):''}</div>${b.pickupTime?`<div class="bk-source">⏰ ${b.pickupTime}–${b.dropoffTime||''}</div>`:''}</div></div>
     <div class="bk-cell"><span class="bk-dur">${b.duration}</span></div>
     <div class="bk-cell">${typeChips(b.types)}</div>
     <div class="bk-cell">${tags.join(' ')}</div>
@@ -796,8 +796,12 @@ function openBookingModal(editId){
         <div id="bk-avail-pill" class="avail-pill avail-ok">— Check dates to see availability</div>
         <div id="bk-conflict" class="conflict-alert"></div>
 
-        <div class="fg"><label>Customer name</label>
-          <input type="text" id="bk-who" value="${b?b.who:''}" placeholder="Full name or group name"></div>
+        <div class="fg-row">
+          <div class="fg"><label>Customer name</label>
+            <input type="text" id="bk-who" value="${b?b.who:''}" placeholder="Full name or group"></div>
+          <div class="fg"><label>Country</label>
+            <input type="text" id="bk-country" value="${b?b.country||'':''}" placeholder="e.g. Portugal"></div>
+        </div>
         <div class="fg"><label>Phone / WhatsApp</label>
           <input type="text" id="bk-phone" value="${b?b.phone:''}" placeholder="+351 9xx xxx xxx"></div>
         <div class="fg-row">
@@ -806,18 +810,37 @@ function openBookingModal(editId){
           <div class="fg"><label>Duration</label>
             <select id="bk-dur" onchange="checkBkAvail()">${durOpts}</select></div>
         </div>
+        <div class="fg-row">
+          <div class="fg"><label>Pickup time</label>
+            <input type="time" id="bk-pickup" value="${b?b.pickupTime||'10:00':'10:00'}"></div>
+          <div class="fg"><label>Drop-off time</label>
+            <input type="time" id="bk-dropoff" value="${b?b.dropoffTime||'18:00':'18:00'}"></div>
+        </div>
 
         <div class="fg"><label>Bikes requested</label>
           <div id="bk-type-rows">${initialRows}</div>
           <button type="button" onclick="addTypeRow()" style="margin-top:8px;font-size:12px;background:none;border:none;color:var(--teal);cursor:pointer;font-weight:600;">+ Add another bike type</button>
         </div>
 
-        <div class="fg-row">
-          <div class="fg"><label>Source</label><select id="bk-source">${srcOpts}</select></div>
-          <div class="fg" style="display:flex;align-items:flex-end;padding-bottom:4px">
-            <div class="fg-check"><input type="checkbox" id="bk-paid" ${b&&b.paid?'checked':''}><label for="bk-paid" style="text-transform:none;letter-spacing:0;font-size:13px;font-weight:500">Paid in advance</label></div>
+        <div class="fg"><label>Source</label><select id="bk-source">${srcOpts}</select></div>
+
+        <div style="background:var(--green-bg);border:0.5px solid #a7f3d0;border-radius:var(--r);padding:12px;margin-bottom:14px">
+          <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.7px;color:var(--green);margin-bottom:10px">Payment</div>
+          <div class="fg-row">
+            <div class="fg">
+              <label>Paid via SumUp (€)</label>
+              <input type="number" id="bk-sumup" value="${b?b.paidSumup||0:0}" min="0" step="0.01" placeholder="0.00">
+            </div>
+            <div class="fg">
+              <label>To pay cash at store (€)</label>
+              <input type="number" id="bk-cash" value="${b?b.paidCash||0:0}" min="0" step="0.01" placeholder="0.00">
+            </div>
+          </div>
+          <div style="font-size:12px;color:var(--green);margin-top:4px">
+            Total: <strong>€<span id="bk-total">0.00</span></strong>
           </div>
         </div>
+
         <div class="fg"><label>Notes</label>
           <input type="text" id="bk-notes" value="${b?b.notes:''}" placeholder="Meeting point, special requests…"></div>
 
@@ -829,6 +852,19 @@ function openBookingModal(editId){
     </div>`;
 
   if(b) checkBkAvail(editId);
+
+  // Live total calculation
+  function updateTotal(){
+    const s = parseFloat(document.getElementById('bk-sumup')?.value)||0;
+    const c = parseFloat(document.getElementById('bk-cash')?.value)||0;
+    const el = document.getElementById('bk-total');
+    if(el) el.textContent = (s+c).toFixed(2);
+  }
+  setTimeout(()=>{
+    document.getElementById('bk-sumup')?.addEventListener('input', updateTotal);
+    document.getElementById('bk-cash')?.addEventListener('input', updateTotal);
+    updateTotal();
+  }, 0);
 }
 
 let typeRowCount=0;
@@ -910,10 +946,15 @@ function saveBooking(){
   console.log('saveBooking called, currentEditId:', currentEditId, 'editId:', editId);
   const who=document.getElementById('bk-who').value.trim();
   const phone=document.getElementById('bk-phone').value.trim();
+  const country=document.getElementById('bk-country').value.trim();
   const start=document.getElementById('bk-start').value;
   const duration=document.getElementById('bk-dur').value;
+  const pickupTime=document.getElementById('bk-pickup').value;
+  const dropoffTime=document.getElementById('bk-dropoff').value;
   const source=document.getElementById('bk-source').value;
-  const paid=document.getElementById('bk-paid').checked;
+  const paidSumup=parseFloat(document.getElementById('bk-sumup').value)||0;
+  const paidCash=parseFloat(document.getElementById('bk-cash').value)||0;
+  const paid=paidSumup>0||paidCash>0;
   const notes=document.getElementById('bk-notes').value.trim();
   const types=getTypeRows().filter(r=>r.qty>0);
 
@@ -935,7 +976,7 @@ function saveBooking(){
     const idx=bookings.findIndex(b=>String(b.id)===String(editId));
     console.log('Found at index:', idx);
     if(idx>=0){
-      bookings[idx]={id:String(editId),who,phone,start,duration,types,paid,source,notes};
+      bookings[idx]={id:String(editId),who,phone,country,start,duration,pickupTime,dropoffTime,types,paid,paidSumup,paidCash,source,notes};
       closeModal();
       renderAll();
       updateBookingInSheet(bookings[idx]);
@@ -944,7 +985,7 @@ function saveBooking(){
     }
   } else {
     const newId = 'BK-' + Date.now().toString().slice(-6);
-    const newBk = {id:newId,who,phone,start,duration,types,paid,source,notes};
+    const newBk = {id:newId,who,phone,country,start,duration,pickupTime,dropoffTime,types,paid,paidSumup,paidCash,source,notes};
     bookings.push(newBk);
     closeModal();
     renderAll();
@@ -1193,26 +1234,38 @@ async function syncFromSheet(){
     const seenIds = new Set();
     const parsedBk = (bData.values||[]).filter(r=>r[1]).map((r, rowIdx)=>{
       let rowId = r[0] || ('BK-R'+rowIdx);
-      // If ID is missing, numeric only, or duplicate, generate a unique one
       if(!rowId || rowId === '10' || rowId === '0' || seenIds.has(rowId)){
         rowId = 'BK-R' + rowIdx;
       }
       seenIds.add(rowId);
+      const col3 = r[3]||'';
+      const isNewFormat = r.length >= 12 && !col3.match(/^\d{4}-\d{2}-\d{2}$/) && isNaN(parseFloat(col3)) && col3 !== 'YES' && col3 !== 'NO';
+      let who,phone,country,start,pickupTime,dropoffTime,duration,cq,gq,fq,tq,paidSumup,paidCash,notes;
+      if(isNewFormat){
+        who=r[1]||''; phone=r[2]||''; country=r[3]||'';
+        start=isoDate(r[4]||''); pickupTime=r[5]||''; dropoffTime=r[6]||'';
+        duration=r[7]||'Full day (10am–6pm)';
+        cq=parseInt(r[8])||0; gq=parseInt(r[9])||0; fq=parseInt(r[10])||0; tq=parseInt(r[11])||0;
+        paidSumup=parseFloat(r[12])||0; paidCash=parseFloat(r[13])||0;
+        notes=r[15]||'';
+      } else {
+        who=r[1]||''; phone=r[2]||''; country='';
+        start=isoDate(r[3]||''); pickupTime=''; dropoffTime='';
+        duration=r[4]||'Full day (10am–6pm)';
+        cq=parseInt(r[5])||0; gq=parseInt(r[6])||0; fq=parseInt(r[7])||0; tq=parseInt(r[8])||0;
+        paidSumup=(r[9]||'').toUpperCase()==='YES'?1:0; paidCash=0;
+        notes=r[10]||'';
+      }
       const types=[];
-      const cq=parseInt(r[5])||0, gq=parseInt(r[6])||0, fq=parseInt(r[7])||0, tq=parseInt(r[8])||0;
-      if(cq>0) types.push({type:'city-ebike', size:'Standard', qty:cq});
-      if(gq>0) types.push({type:'gravel',     size:'Standard', qty:gq});
-      if(fq>0) types.push({type:'fat-tyre',   size:'Standard', qty:fq});
-      if(tq>0) types.push({type:'e-touring',  size:'Standard', qty:tq});
+      if(cq>0) types.push({type:'city-ebike',size:'Standard',qty:cq});
+      if(gq>0) types.push({type:'gravel',size:'Standard',qty:gq});
+      if(fq>0) types.push({type:'fat-tyre',size:'Standard',qty:fq});
+      if(tq>0) types.push({type:'e-touring',size:'Standard',qty:tq});
       return {
-        id: rowId,
-        who: r[1]||'', phone: r[2]||'',
-        start: isoDate(r[3]||''),
-        duration: r[4]||'Full day (10am\u20136pm)',
-        types: types.length ? types : [{type:'city-ebike',size:'Standard',qty:1}],
-        paid: (r[9]||'').toUpperCase()==='YES',
-        source: 'Phone / WhatsApp',
-        notes: r[10]||''
+        id:rowId, who, phone, country, start, pickupTime, dropoffTime, duration,
+        types: types.length?types:[{type:'city-ebike',size:'Standard',qty:1}],
+        paid: paidSumup>0||paidCash>0, paidSumup, paidCash,
+        source:'Phone / WhatsApp', notes
       };
     });
     if(parsedBk.length > 0) bookings = parsedBk;
@@ -1252,12 +1305,13 @@ function showFileProtocolWarning(){
 }
 
 async function updateBookingInSheet(b){
-  // Find the row in the sheet by Booking ID and update it entirely
   const cq = b.types.find(t=>t.type==='city-ebike')?.qty || 0;
   const gq = b.types.find(t=>t.type==='gravel')?.qty    || 0;
   const fq = b.types.find(t=>t.type==='fat-tyre')?.qty  || 0;
   const tq = b.types.find(t=>t.type==='e-touring')?.qty || 0;
-  const row = [b.id, b.who, b.phone, b.start, b.duration, cq, gq, fq, tq, b.paid?'YES':'NO', b.notes];
+  const row = [b.id, b.who, b.phone, b.country||'', b.start, b.pickupTime||'', b.dropoffTime||'',
+               b.duration, cq, gq, fq, tq,
+               b.paidSumup||0, b.paidCash||0, (b.paidSumup||0)+(b.paidCash||0), b.notes];
   try {
     await fetch(APPS_SCRIPT_URL, {
       method: 'POST',
@@ -1275,7 +1329,9 @@ async function writeBookingToSheet(b){
   const gq = b.types.find(t=>t.type==='gravel')?.qty    || 0;
   const fq = b.types.find(t=>t.type==='fat-tyre')?.qty  || 0;
   const tq = b.types.find(t=>t.type==='e-touring')?.qty || 0;
-  const row = [b.id, b.who, b.phone, b.start, b.duration, cq, gq, fq, tq, b.paid?'YES':'NO', b.notes];
+  const row = [b.id, b.who, b.phone, b.country||'', b.start, b.pickupTime||'', b.dropoffTime||'',
+               b.duration, cq, gq, fq, tq,
+               b.paidSumup||0, b.paidCash||0, (b.paidSumup||0)+(b.paidCash||0), b.notes];
   try {
     await fetch(APPS_SCRIPT_URL, {
       method: 'POST',
