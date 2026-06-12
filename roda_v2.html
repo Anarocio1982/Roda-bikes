@@ -1238,14 +1238,17 @@ async function syncFromSheet(){
         rowId = 'BK-R' + rowIdx;
       }
       seenIds.add(rowId);
-      const col3 = r[3]||'';
-      const col4 = r[4]||'';
-      // New format: date is in col E (r[4]). Old format: date is in col D (r[3])
-      const col4isDate = /^\d{4}-\d{2}-\d{2}$/.test(isoDate(col4));
-      const col3isDate = /^\d{4}-\d{2}-\d{2}$/.test(isoDate(col3));
-      const isNewFormat = col4isDate && !col3isDate;
+
+      // Smart column detection: find which column holds the date
+      // New format: ID,Who,Phone,Country,Date,Pickup,Dropoff,Dur,City,Gravel,Fat,Tour,Sumup,Cash,Total,Notes
+      // Old format: ID,Who,Phone,Date,Dur,City,Gravel,Fat,Tour,Paid,Notes
+      const r3date = /^\d{4}-\d{2}-\d{2}$/.test(isoDate(r[3]||''));
+      const r4date = /^\d{4}-\d{2}-\d{2}$/.test(isoDate(r[4]||''));
+      const isNew  = !r3date && r4date;  // date in col E = new format
+      const isOld  = r3date;              // date in col D = old format
+
       let who,phone,country,start,pickupTime,dropoffTime,duration,cq,gq,fq,tq,paidSumup,paidCash,notes;
-      if(isNewFormat){
+      if(isNew){
         who=r[1]||''; phone=r[2]||''; country=r[3]||'';
         start=isoDate(r[4]||''); pickupTime=r[5]||''; dropoffTime=r[6]||'';
         duration=r[7]||'Full day (10am–6pm)';
@@ -1253,12 +1256,22 @@ async function syncFromSheet(){
         paidSumup=parseFloat(r[12])||0; paidCash=parseFloat(r[13])||0;
         notes=r[15]||'';
       } else {
+        // Old format OR row with empty country and empty date col E
+        // If neither col has a date, try col D as date anyway
         who=r[1]||''; phone=r[2]||''; country='';
-        start=isoDate(r[3]||''); pickupTime=''; dropoffTime='';
-        duration=r[4]||'Full day (10am–6pm)';
-        cq=parseInt(r[5])||0; gq=parseInt(r[6])||0; fq=parseInt(r[7])||0; tq=parseInt(r[8])||0;
-        paidSumup=(r[9]||'').toUpperCase()==='YES'?1:0; paidCash=0;
-        notes=r[10]||'';
+        start=isoDate(r[3]||'') || isoDate(r[4]||'');
+        pickupTime=r[5]||''; dropoffTime=r[6]||'';
+        // If old format, duration is in col E; if ambiguous, check both
+        duration = r3date ? (r[4]||'Full day (10am–6pm)') : (r[7]||r[4]||'Full day (10am–6pm)');
+        if(r3date){
+          cq=parseInt(r[5])||0; gq=parseInt(r[6])||0; fq=parseInt(r[7])||0; tq=parseInt(r[8])||0;
+          paidSumup=(r[9]||'').toUpperCase()==='YES'?1:0; paidCash=0;
+          notes=r[10]||'';
+        } else {
+          cq=parseInt(r[8])||0; gq=parseInt(r[9])||0; fq=parseInt(r[10])||0; tq=parseInt(r[11])||0;
+          paidSumup=parseFloat(r[12])||0; paidCash=parseFloat(r[13])||0;
+          notes=r[15]||'';
+        }
       }
       const types=[];
       if(cq>0) types.push({type:'city-ebike',size:'Standard',qty:cq});
