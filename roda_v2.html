@@ -1238,25 +1238,23 @@ async function syncFromSheet(){
         rowId = 'BK-R' + rowIdx;
       }
       seenIds.add(rowId);
-
-      // Fixed column order (new fields appended at end, never inserted in middle):
-      // A=ID, B=Who, C=Phone, D=Start, E=Duration, F=City, G=Gravel, H=Fat, I=Touring,
-      // J=Paid(legacy), K=Notes, L=Country, M=Pickup, N=Dropoff, O=SumUp, P=Cash, Q=Total
-      const who        = r[1]||'';
-      const phone      = r[2]||'';
-      const start      = isoDate(r[3]||'');
-      const duration   = r[4]||'Full day (10am–6pm)';
-      const cq         = parseInt(r[5])||0;
-      const gq         = parseInt(r[6])||0;
-      const fq         = parseInt(r[7])||0;
-      const tq         = parseInt(r[8])||0;
-      const legacyPaid = (r[9]||'').toUpperCase()==='YES';
-      const notes      = r[10]||'';
-      const country    = r[11]||'';
-      const pickupTime = r[12]||'';
-      const dropoffTime= r[13]||'';
-      const paidSumup  = parseFloat(r[14])||0;
-      const paidCash   = parseFloat(r[15])||0;
+      // Sheet columns (new format with Country inserted at D):
+      // A=ID, B=Who, C=Phone, D=Country, E=Start, F=Pickup, G=Dropoff,
+      // H=Duration, I=City, J=Gravel, K=Fat, L=Touring, M=SumUp, N=Cash, O=Total, P=Notes
+      const who         = r[1]||'';
+      const phone       = r[2]||'';
+      const country     = r[3]||'';
+      const start       = isoDate(r[4]||'');
+      const pickupTime  = r[5]||'';
+      const dropoffTime = r[6]||'';
+      const duration    = r[7]||'Full day (10am–6pm)';
+      const cq          = parseInt(r[8])||0;
+      const gq          = parseInt(r[9])||0;
+      const fq          = parseInt(r[10])||0;
+      const tq          = parseInt(r[11])||0;
+      const paidSumup   = parseFloat(r[12])||0;
+      const paidCash    = parseFloat(r[13])||0;
+      const notes       = r[15]||'';
 
       const types=[];
       if(cq>0) types.push({type:'city-ebike',size:'Standard',qty:cq});
@@ -1266,7 +1264,7 @@ async function syncFromSheet(){
       return {
         id:rowId, who, phone, country, start, pickupTime, dropoffTime, duration,
         types: types.length?types:[{type:'city-ebike',size:'Standard',qty:1}],
-        paid: paidSumup>0||paidCash>0||legacyPaid, paidSumup, paidCash,
+        paid: paidSumup>0||paidCash>0, paidSumup, paidCash,
         source:'Phone / WhatsApp', notes
       };
     });
@@ -1311,10 +1309,10 @@ async function updateBookingInSheet(b){
   const gq = b.types.find(t=>t.type==='gravel')?.qty    || 0;
   const fq = b.types.find(t=>t.type==='fat-tyre')?.qty  || 0;
   const tq = b.types.find(t=>t.type==='e-touring')?.qty || 0;
-  const row = [b.id, b.who, b.phone, b.start, b.duration, cq, gq, fq, tq,
-               (b.paidSumup>0||b.paidCash>0)?'YES':'NO', b.notes,
-               b.country||'', b.pickupTime||'', b.dropoffTime||'',
-               b.paidSumup||0, b.paidCash||0, (b.paidSumup||0)+(b.paidCash||0)];
+  const row = [b.id, b.who, b.phone, b.country||'', b.start,
+               b.pickupTime||'', b.dropoffTime||'', b.duration,
+               cq, gq, fq, tq,
+               b.paidSumup||0, b.paidCash||0, (b.paidSumup||0)+(b.paidCash||0), b.notes||''];
   try {
     await fetch(APPS_SCRIPT_URL, {
       method: 'POST',
@@ -1332,11 +1330,11 @@ async function writeBookingToSheet(b){
   const gq = b.types.find(t=>t.type==='gravel')?.qty    || 0;
   const fq = b.types.find(t=>t.type==='fat-tyre')?.qty  || 0;
   const tq = b.types.find(t=>t.type==='e-touring')?.qty || 0;
-  // Column order: ID,Who,Phone,Start,Dur,City,Gravel,Fat,Touring,Paid,Notes,Country,Pickup,Dropoff,SumUp,Cash,Total
-  const row = [b.id, b.who, b.phone, b.start, b.duration, cq, gq, fq, tq,
-               (b.paidSumup>0||b.paidCash>0)?'YES':'NO', b.notes,
-               b.country||'', b.pickupTime||'', b.dropoffTime||'',
-               b.paidSumup||0, b.paidCash||0, (b.paidSumup||0)+(b.paidCash||0)];
+  // Column order: ID,Who,Phone,Country,Start,Pickup,Dropoff,Dur,City,Gravel,Fat,Touring,SumUp,Cash,Total,Notes
+  const row = [b.id, b.who, b.phone, b.country||'', b.start,
+               b.pickupTime||'', b.dropoffTime||'', b.duration,
+               cq, gq, fq, tq,
+               b.paidSumup||0, b.paidCash||0, (b.paidSumup||0)+(b.paidCash||0), b.notes||''];
   try {
     await fetch(APPS_SCRIPT_URL, {
       method: 'POST',
