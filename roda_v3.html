@@ -1263,8 +1263,17 @@ async function syncFromSheet(){
         start=isoDate(r[4]||'');
         pickupTime=r[5]||''; dropoffTime=r[6]||'';
         if(start==='1899-12-30'||start==='1899-12-29') start='';
-        if(pickupTime==='1899-12-30') pickupTime='';
-        if(dropoffTime==='1899-12-30') dropoffTime='';
+        if(pickupTime==='1899-12-30'||pickupTime==='1899-12-29') pickupTime='';
+        if(dropoffTime==='1899-12-30'||dropoffTime==='1899-12-29') dropoffTime='';
+        // Convert Google Sheets decimal time (0.4166... = 10:00) to HH:MM
+        function decToTime(v){ 
+          if(!v || isNaN(parseFloat(v))) return String(v||'');
+          const n=parseFloat(v); if(n<=0||n>=1) return '';
+          const mins=Math.round(n*1440); 
+          return String(Math.floor(mins/60)).padStart(2,'0')+':'+String(mins%60).padStart(2,'0');
+        }
+        if(pickupTime && !String(pickupTime).includes(':')) pickupTime=decToTime(pickupTime);
+        if(dropoffTime && !String(dropoffTime).includes(':')) dropoffTime=decToTime(dropoffTime);
         duration=r[7]||'Full day (10am–6pm)';
         cq=parseInt(r[8])||0; gq=parseInt(r[9])||0; fq=parseInt(r[10])||0; tq=parseInt(r[11])||0;
         paidSumup=parseFloat(r[12])||0; paidCash=parseFloat(r[13])||0;
