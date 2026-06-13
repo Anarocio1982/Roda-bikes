@@ -1168,7 +1168,7 @@ function setSync(state, msg){
 }
 
 function sheetsGet(range){
-  const url = `https://sheets.googleapis.com/v4/spreadsheets/${CFG.sheetId}/values/${encodeURIComponent(range)}?key=${CFG.apiKey}`;
+  const url = `https://sheets.googleapis.com/v4/spreadsheets/${CFG.sheetId}/values/${encodeURIComponent(range)}?key=${CFG.apiKey}&valueRenderOption=UNFORMATTED_VALUE`;
   return fetch(url).then(r=>{ if(!r.ok) throw new Error('HTTP '+r.status); return r.json(); });
 }
 
