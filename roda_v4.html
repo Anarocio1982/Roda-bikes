@@ -313,12 +313,387 @@ body{font-family:var(--font-body);background:var(--paper);color:var(--ink);font-
 // STATE
 // ════════════════════════════════════════════════════════════════
 const BIKE_TYPES = {
-  'city-ebike':  { label:'City E-Bike',    short:'City',    sizes:['Standard'] },
-  'gravel':      { label:'Gravel',         short:'Gravel',  sizes:['M','L'] },
-  'fat-tyre':    { label:'Fat Tyre',       short:'Fat',     sizes:['Standard'] },
-  'e-touring':   { label:'E-Touring',      short:'Touring', sizes:['S','M'] },
+  'city-ebike':         { label:'City E-Bike',          short:'City',       sizes:['Standard'] },
+  'gravel':             { label:'Gravel',                short:'Gravel',     sizes:['M','L'] },
+  'fat-tyre':           { label:'Fat Tyre - Ericeira',   short:'Fat',        sizes:['Standard'] },
+  'e-touring':          { label:'E-Touring',             short:'Touring',    sizes:['S','M'] },
+  'city-ebike-ericeira':{ label:'City E-Bike - Ericeira',short:'City-Eir',   sizes:['Standard'] },
+  'gravel-ericeira':    { label:'Gravel - Ericeira',     short:'Grav-Eir',   sizes:['S','M','L'] },
+  'e-mtb':              { label:'E-MTB',                 short:'E-MTB',      sizes:['M','L'] },
+  'mtb':                { label:'MTB',                   short:'MTB',        sizes:['M','L'] },
 };
-const DURATIONS = ['Full day (10am–6pm)','24 hours','2 days','3 days','4 days','5 days','6 days','7 days','More than 7 days'];
+// Duration replaced by Return Date field
+const SOURCES   = ['Walk-in','Phone / WhatsApp','Website'];
+const PARTNER_STORES = [
+  { id:'cascais',  name:'RODA Cascais',   loc:'Cascais' },
+  { id:'sintra',   name:'RODA Sintra',    loc:'Sintra' },
+  { id:'setubal',  name:'RODA Setúbal',   loc:'Setúbal' },
+  { id:'porto',    name:'RODA Porto',     loc:'Porto' },
+];
+const PREP_HOURS = 24;
+
+// Initial inventory
+let bikes = [
+  // City E-Bike Lisbon (14)
+  ...Array.from({length:12},(_,i)=>({ id:`CE${String(i+1).padStart(2,'0')}`, type:'city-ebike', size:'Standard', status:'ready', prepUntil:null, external:false, fromStore:null })),
+  { id:'CE13', type:'city-ebike', size:'Standard', status:'ready', prepUntil:null, external:false, fromStore:null },
+  { id:'CE14', type:'city-ebike', size:'Standard', status:'ready', prepUntil:null, external:false, fromStore:null },
+  // Gravel Lisbon (2)
+  { id:'GR01', type:'gravel', size:'M', status:'ready', prepUntil:null, external:false, fromStore:null },
+  { id:'GR02', type:'gravel', size:'L', status:'ready', prepUntil:null, external:false, fromStore:null },
+  // Fat Tyre - Ericeira (2)
+  { id:'FT01', type:'fat-tyre', size:'Standard', status:'ready', prepUntil:null, external:false, fromStore:null },
+  { id:'FT02', type:'fat-tyre', size:'Standard', status:'ready', prepUntil:null, external:false, fromStore:null },
+  // E-Touring (2)
+  { id:'ET01', type:'e-touring', size:'S', status:'ready', prepUntil:null, external:false, fromStore:null },
+  { id:'ET02', type:'e-touring', size:'M', status:'ready', prepUntil:null, external:false, fromStore:null },
+  // City E-Bike - Ericeira (20)
+  ...Array.from({length:20},(_,i)=>({ id:`CEE${String(i+1).padStart(2,'0')}`, type:'city-ebike-ericeira', size:'Standard', status:'ready', prepUntil:null, external:false, fromStore:null })),
+  // Gravel - Ericeira (5: 2M, 2L, 1S)
+  { id:'GRE01', type:'gravel-ericeira', size:'M', status:'ready', prepUntil:null, external:false, fromStore:null },
+  { id:'GRE02', type:'gravel-ericeira', size:'M', status:'ready', prepUntil:null, external:false, fromStore:null },
+  { id:'GRE03', type:'gravel-ericeira', size:'L', status:'ready', prepUntil:null, external:false, fromStore:null },
+  { id:'GRE04', type:'gravel-ericeira', size:'L', status:'ready', prepUntil:null, external:false, fromStore:null },
+  { id:'GRE05', type:'gravel-ericeira', size:'S', status:'ready', prepUntil:null, external:false, fromStore:null },
+  // E-MTB (6: 3M, 3L)
+  { id:'EMTB01', type:'e-mtb', size:'M', status:'ready', prepUntil:null, external:false, fromStore:null },
+  { id:'EMTB02', type:'e-mtb', size:'M', status:'ready', prepUntil:null, external:false, fromStore:null },
+  { id:'EMTB03', type:'e-mtb', size:'M', status:'ready', prepUntil:null, external:false, fromStore:null },
+  { id:'EMTB04', type:'e-mtb', size:'L', status:'ready', prepUntil:null, external:false, fromStore:null },
+  { id:'EMTB05', type:'e-mtb', size:'L', status:'ready', prepUntil:null, external:false, fromStore:null },
+  { id:'EMTB06', type:'e-mtb', size:'L', status:'ready', prepUntil:null, external:false, fromStore:null },
+  // MTB (6: 3M, 3L)
+  { id:'MTB01', type:'mtb', size:'M', status:'ready', prepUntil:null, external:false, fromStore:null },
+  { id:'MTB02', type:'mtb', size:'M', status:'ready', prepUntil:null, external:false, fromStore:null },
+  { id:'MTB03', type:'mtb', size:'M', status:'ready', prepUntil:null, external:false, fromStore:null },
+  { id:'MTB04', type:'mtb', size:'L', status:'ready', prepUntil:null, external:false, fromStore:null },
+  { id:'MTB05', type:'mtb', size:'L', status:'ready', prepUntil:null, external:false, fromStore:null },
+  { id:'MTB06', type:'mtb', size:'L', status:'ready', prepUntil:null, external:false, fromStore:null },
+]!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>RODA · Booking System</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Syne:wght@600;700;800&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --ink:#0d1a0f;--ink2:#3a4a3c;--ink3:#7a8a7c;
+  --paper:#f5f3ee;--card:#ffffff;--card2:#f0ede6;--card3:#e8e4db;
+  --teal:#009BB5;--teal-d:#007a8f;--teal-l:#e0f6fa;--teal-m:#b3e8f0;
+  --green:#2d7a4f;--green-bg:#e8f5ee;
+  --amber:#c47d0a;--amber-bg:#fef7e6;
+  --red:#c0392b;--red-bg:#fdf0ee;
+  --blue:#1a5fa8;--blue-bg:#eef4fd;
+  --border:rgba(13,26,15,0.10);--border2:rgba(13,26,15,0.18);
+  --shadow:0 1px 3px rgba(0,0,0,0.08),0 4px 16px rgba(0,0,0,0.06);
+  --shadow-lg:0 8px 32px rgba(0,0,0,0.12);
+  --r:10px;--r-lg:16px;
+  --font-head:'Syne',sans-serif;
+  --font-body:'DM Sans',sans-serif;
+  --font-mono:'DM Mono',monospace;
+}
+body{font-family:var(--font-body);background:var(--paper);color:var(--ink);font-size:14px;min-height:100vh;}
+
+
+/* ── CONFIG BANNER ── */
+.cfg-banner{background:#FEF7E6;border-bottom:2px solid #C47D0A;padding:14px 20px;display:flex;gap:14px;align-items:flex-start;}
+.cfg-banner.hidden{display:none;}
+.cfg-icon{font-size:20px;flex-shrink:0;margin-top:2px;}
+.cfg-body{flex:1;}
+.cfg-body strong{color:#C47D0A;font-size:13px;}
+.cfg-fields{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px;}
+.cfg-fields label{display:block;font-size:11px;font-weight:700;color:#7A8A7C;text-transform:uppercase;letter-spacing:.5px;margin-bottom:3px;}
+.cfg-fields input{width:100%;padding:8px 10px;border:0.5px solid rgba(13,26,15,0.2);border-radius:8px;font-size:12px;font-family:'DM Mono',monospace;background:#fff;color:#0d1a0f;}
+.cfg-save{margin-top:10px;padding:7px 18px;background:#C47D0A;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;font-family:'DM Sans',sans-serif;}
+.cfg-note{font-size:11px;color:#7A8A7C;margin-top:6px;line-height:1.5;}
+.sync-bar{background:var(--ink);color:rgba(255,255,255,0.55);font-size:11px;padding:5px 20px;display:flex;align-items:center;gap:8px;}
+.sync-dot{width:7px;height:7px;border-radius:50%;background:#666;flex-shrink:0;}
+.sync-dot.live{background:#1D9E75;}
+.sync-dot.err{background:#c0392b;}
+.sync-dot.loading{background:#C47D0A;animation:pulse 1s ease-in-out infinite;}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.35}}
+@media(max-width:600px){.cfg-fields{grid-template-columns:1fr;}}
+
+/* ── TOPBAR ── */
+.topbar{background:var(--ink);color:#fff;padding:0 24px;height:56px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100;}
+.logo{font-family:var(--font-head);font-size:22px;font-weight:800;letter-spacing:-0.5px;color:#fff;}
+.logo span{color:var(--teal);}
+.topbar-center{display:flex;gap:2px;}
+.nav-btn{background:none;border:none;color:rgba(255,255,255,0.55);font-family:var(--font-body);font-size:13px;font-weight:500;padding:6px 14px;border-radius:6px;cursor:pointer;transition:all .15s;}
+.nav-btn:hover,.nav-btn.active{background:rgba(255,255,255,0.10);color:#fff;}
+.topbar-right{display:flex;align-items:center;gap:10px;}
+.date-chip{font-family:var(--font-mono);font-size:11px;color:rgba(255,255,255,0.5);background:rgba(255,255,255,0.08);padding:4px 10px;border-radius:6px;}
+.btn-add{background:var(--teal);color:#fff;border:none;border-radius:8px;padding:7px 16px;font-size:13px;font-weight:600;cursor:pointer;font-family:var(--font-body);}
+.btn-add:hover{background:var(--teal-d);}
+
+/* ── LAYOUT ── */
+.page{display:none;padding:24px;max-width:1100px;margin:0 auto;}
+.page.active{display:block;}
+
+/* ── SECTION TITLE ── */
+.section-title{font-family:var(--font-head);font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:1.5px;color:var(--ink3);margin-bottom:14px;}
+
+/* ── STAT CARDS ── */
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:24px;}
+.stat-card{background:var(--card);border-radius:var(--r-lg);border:0.5px solid var(--border);padding:16px 20px;}
+.stat-num{font-family:var(--font-head);font-size:32px;font-weight:800;line-height:1;}
+.stat-lbl{font-size:12px;color:var(--ink3);margin-top:4px;font-weight:500;}
+.stat-sub{font-size:11px;color:var(--ink3);margin-top:2px;}
+.stat-card.alert{border-color:#fca5a5;background:var(--red-bg);}
+.stat-card.alert .stat-num{color:var(--red);}
+.stat-card.warn{border-color:#fcd34d;background:var(--amber-bg);}
+.stat-card.warn .stat-num{color:var(--amber);}
+.stat-card.good{border-color:#6ee7b7;background:var(--green-bg);}
+.stat-card.good .stat-num{color:var(--green);}
+
+/* ── ALERT STRIP ── */
+.alert-strip{display:flex;flex-direction:column;gap:8px;margin-bottom:24px;}
+.alert-row{display:flex;align-items:center;gap:12px;padding:10px 16px;border-radius:var(--r);font-size:13px;font-weight:500;}
+.alert-row.red{background:var(--red-bg);border:0.5px solid #fca5a5;color:var(--red);}
+.alert-row.amber{background:var(--amber-bg);border:0.5px solid #fcd34d;color:var(--amber);}
+.alert-row.blue{background:var(--blue-bg);border:0.5px solid #93c5fd;color:var(--blue);}
+.alert-row.green{background:var(--green-bg);border:0.5px solid #6ee7b7;color:var(--green);}
+.alert-row .al-icon{font-size:16px;flex-shrink:0;}
+.alert-row .al-body{flex:1;}
+.alert-row .al-items{margin-top:4px;display:flex;flex-direction:column;gap:3px;}
+.al-item{display:flex;gap:8px;align-items:center;font-weight:400;font-size:12px;opacity:.85;}
+.al-who{font-weight:600;opacity:1;}
+
+/* ── WEEK STRIP ── */
+.week-strip{display:grid;grid-template-columns:repeat(7,1fr);gap:8px;margin-bottom:24px;}
+.day-card{background:var(--card);border:0.5px solid var(--border);border-radius:var(--r);overflow:hidden;}
+.day-card.today{border-color:var(--teal);border-width:1.5px;}
+.day-head{padding:8px 10px 6px;background:var(--card2);}
+.day-wd{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:var(--ink3);}
+.day-dn{font-family:var(--font-head);font-size:20px;font-weight:800;line-height:1;margin-top:1px;}
+.day-card.today .day-dn{color:var(--teal);}
+.day-avail{font-size:10px;font-weight:600;margin-top:2px;}
+.day-avail.ok{color:var(--green);}
+.day-avail.warn{color:var(--amber);}
+.day-avail.full{color:var(--red);font-weight:700;}
+.day-bks{padding:6px 8px;display:flex;flex-direction:column;gap:3px;min-height:40px;}
+.day-bk{font-size:10px;padding:2px 6px;border-radius:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-weight:600;}
+.day-bk.start{background:var(--teal-l);color:var(--teal-d);}
+.day-bk.mid{background:var(--card3);color:var(--ink2);}
+.day-bk.end{background:var(--amber-bg);color:var(--amber);}
+.day-bk.over{background:var(--red-bg);color:var(--red);}
+
+/* ── BOOKINGS TABLE ── */
+.bk-table-wrap{background:var(--card);border-radius:var(--r-lg);border:0.5px solid var(--border);overflow:hidden;margin-bottom:24px;}
+.bk-table-head{display:grid;grid-template-columns:160px 120px 100px 90px 120px 90px 1fr 80px;gap:0;background:var(--card2);border-bottom:0.5px solid var(--border);}
+.bk-th{padding:10px 14px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:var(--ink3);border-right:0.5px solid var(--border);}
+.bk-th:last-child{border-right:none;}
+.bk-row{display:grid;grid-template-columns:160px 120px 100px 90px 120px 90px 1fr 80px;border-bottom:0.5px solid var(--border);transition:background .1s;}
+.bk-row:last-child{border-bottom:none;}
+.bk-row:hover{background:var(--card2);}
+.bk-cell{padding:12px 14px;font-size:13px;display:flex;align-items:center;border-right:0.5px solid var(--border);overflow:hidden;}
+.bk-cell:last-child{border-right:none;}
+.bk-who{font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.bk-source{font-size:11px;color:var(--ink3);}
+.badge{display:inline-flex;align-items:center;padding:2px 8px;border-radius:20px;font-size:11px;font-weight:700;white-space:nowrap;}
+.badge-paid{background:var(--green-bg);color:var(--green);}
+.badge-unpaid{background:var(--amber-bg);color:var(--amber);}
+.badge-conflict{background:var(--red-bg);color:var(--red);}
+.badge-prep{background:var(--blue-bg);color:var(--blue);}
+.bk-dur{font-family:var(--font-mono);font-size:12px;color:var(--ink2);}
+.bk-type-chips{display:flex;gap:4px;flex-wrap:wrap;}
+.type-chip{font-size:10px;padding:2px 7px;border-radius:6px;font-weight:600;background:var(--card3);color:var(--ink2);}
+.btn-icon{background:none;border:0.5px solid var(--border2);border-radius:6px;padding:4px 8px;cursor:pointer;font-size:12px;color:var(--ink2);}
+.btn-icon:hover{background:var(--card2);}
+.btn-icon.del{border-color:#fca5a5;color:var(--red);}
+.bk-actions{display:flex;gap:5px;}
+.bk-phone{font-family:var(--font-mono);font-size:11px;color:var(--teal);text-decoration:none;}
+.bk-phone:hover{text-decoration:underline;}
+
+/* ── INVENTORY GRID ── */
+.inv-section{margin-bottom:28px;}
+.inv-type-header{display:flex;align-items:center;gap:10px;margin-bottom:10px;}
+.inv-type-name{font-family:var(--font-head);font-size:16px;font-weight:700;}
+.inv-type-count{font-size:12px;color:var(--ink3);font-weight:500;}
+.inv-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:10px;}
+.bike-card{background:var(--card);border-radius:var(--r-lg);border:0.5px solid var(--border);padding:16px;position:relative;transition:box-shadow .15s;}
+.bike-card:hover{box-shadow:var(--shadow);}
+.bike-card.out{opacity:.7;border-style:dashed;}
+.bike-card.prep{border-color:#93c5fd;background:var(--blue-bg);}
+.bike-card.external{border-color:var(--teal);background:var(--teal-l);}
+.bike-id{font-family:var(--font-mono);font-size:11px;color:var(--ink3);margin-bottom:6px;}
+.bike-model{font-weight:700;font-size:14px;margin-bottom:2px;}
+.bike-size{font-size:11px;color:var(--ink3);}
+.bike-status{margin-top:10px;}
+.status-dot{display:inline-flex;align-items:center;gap:5px;font-size:12px;font-weight:600;padding:3px 9px;border-radius:20px;}
+.status-ready{background:var(--green-bg);color:var(--green);}
+.status-out{background:var(--red-bg);color:var(--red);}
+.status-prep{background:var(--blue-bg);color:var(--blue);}
+.status-ext{background:var(--teal-l);color:var(--teal-d);}
+.bike-prep-until{font-size:11px;color:var(--blue);margin-top:4px;font-family:var(--font-mono);}
+.bike-card-actions{display:flex;gap:5px;margin-top:10px;}
+.btn-xs{padding:3px 8px;font-size:11px;border:0.5px solid var(--border2);border-radius:6px;background:var(--card);cursor:pointer;font-family:var(--font-body);color:var(--ink2);}
+.btn-xs:hover{background:var(--card2);}
+.btn-xs.teal{background:var(--teal);color:#fff;border-color:transparent;}
+.btn-xs.teal:hover{background:var(--teal-d);}
+.inv-summary-bar{display:flex;gap:16px;margin-bottom:20px;flex-wrap:wrap;}
+.inv-sum-item{background:var(--card);border:0.5px solid var(--border);border-radius:var(--r);padding:10px 16px;display:flex;flex-direction:column;gap:2px;}
+.inv-sum-num{font-family:var(--font-head);font-size:22px;font-weight:800;}
+.inv-sum-lbl{font-size:11px;color:var(--ink3);}
+
+/* ── MODAL ── */
+.modal-backdrop{position:fixed;inset:0;background:rgba(13,26,15,0.5);display:flex;align-items:center;justify-content:center;z-index:500;padding:1rem;backdrop-filter:blur(2px);}
+.modal{background:var(--card);border-radius:var(--r-lg);border:0.5px solid var(--border);padding:28px;width:100%;max-width:500px;max-height:90vh;overflow-y:auto;box-shadow:var(--shadow-lg);}
+.modal h2{font-family:var(--font-head);font-size:20px;font-weight:800;margin-bottom:20px;}
+.fg{margin-bottom:16px;}
+.fg label{display:block;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.7px;color:var(--ink3);margin-bottom:5px;}
+.fg input,.fg select,.fg textarea{width:100%;padding:10px 12px;border:0.5px solid var(--border2);border-radius:var(--r);font-size:14px;font-family:var(--font-body);background:var(--card);color:var(--ink);}
+.fg input:focus,.fg select:focus,.fg textarea:focus{outline:2px solid var(--teal);outline-offset:-1px;border-color:transparent;}
+.fg-row{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+.fg-check{display:flex;align-items:center;gap:8px;font-size:13px;padding:6px 0;}
+.fg-check input[type=checkbox]{width:16px;height:16px;accent-color:var(--teal);}
+.modal-actions{display:flex;gap:8px;justify-content:flex-end;margin-top:20px;padding-top:16px;border-top:0.5px solid var(--border);}
+.btn-cancel{padding:9px 18px;border:0.5px solid var(--border2);border-radius:var(--r);background:var(--card);cursor:pointer;font-size:13px;font-weight:600;color:var(--ink2);}
+.btn-save{padding:9px 22px;background:var(--teal);color:#fff;border:none;border-radius:var(--r);font-size:13px;font-weight:700;cursor:pointer;font-family:var(--font-body);}
+.btn-save:hover{background:var(--teal-d);}
+.avail-pill{display:inline-flex;align-items:center;gap:6px;padding:6px 14px;border-radius:20px;font-size:12px;font-weight:700;margin-bottom:16px;font-family:var(--font-mono);}
+.avail-ok{background:var(--green-bg);color:var(--green);}
+.avail-warn{background:var(--amber-bg);color:var(--amber);}
+.avail-full{background:var(--red-bg);color:var(--red);}
+.conflict-alert{background:var(--red-bg);border:0.5px solid #fca5a5;border-radius:8px;padding:10px 14px;font-size:12px;color:var(--red);margin-bottom:14px;line-height:1.6;display:none;}
+.type-selector{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:6px;}
+.type-opt{border:1.5px solid var(--border2);border-radius:var(--r);padding:8px 10px;cursor:pointer;font-size:12px;font-weight:600;text-align:center;transition:all .15s;}
+.type-opt:hover,.type-opt.selected{border-color:var(--teal);background:var(--teal-l);color:var(--teal-d);}
+.qty-row{display:flex;align-items:center;gap:8px;margin-top:4px;}
+.qty-input{width:60px!important;}
+.qty-avail{font-size:11px;color:var(--ink3);}
+
+/* ── TRANSFER MODAL ── */
+.store-opts{display:flex;flex-direction:column;gap:6px;margin-top:4px;}
+.store-opt{border:1.5px solid var(--border2);border-radius:var(--r);padding:10px 14px;cursor:pointer;transition:all .15s;display:flex;align-items:center;justify-content:space-between;}
+.store-opt:hover,.store-opt.selected{border-color:var(--teal);background:var(--teal-l);}
+.store-opt-name{font-weight:600;font-size:13px;}
+.store-opt-loc{font-size:11px;color:var(--ink3);}
+
+/* ── MISC ── */
+.empty{text-align:center;padding:2rem;color:var(--ink3);font-size:13px;}
+.divider{height:0.5px;background:var(--border);margin:20px 0;}
+.filter-bar{display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap;}
+.filter-sel{font-size:12px;padding:6px 10px;border:0.5px solid var(--border2);border-radius:8px;background:var(--card);color:var(--ink);font-family:var(--font-body);}
+.tag-ext{font-size:10px;background:var(--teal-l);color:var(--teal-d);padding:1px 6px;border-radius:4px;font-weight:700;margin-left:4px;}
+
+@media(max-width:700px){
+  .stats{grid-template-columns:1fr 1fr;}
+  .week-strip{grid-template-columns:repeat(4,1fr);}
+  .bk-table-head,.bk-row{grid-template-columns:140px 90px 1fr 70px;}
+  .bk-th:nth-child(3),.bk-th:nth-child(4),.bk-th:nth-child(5),.bk-cell:nth-child(3),.bk-cell:nth-child(4),.bk-cell:nth-child(5){display:none;}
+  .inv-grid{grid-template-columns:1fr 1fr;}
+  .fg-row{grid-template-columns:1fr;}
+  .topbar-center{display:none;}
+}
+</style>
+</head>
+<body>
+
+<!-- TOPBAR -->
+<div class="topbar">
+  <div class="logo">RODA <span>·</span></div>
+  <div class="topbar-center">
+    <button class="nav-btn active" onclick="showPage('dashboard',this)">Dashboard</button>
+    <button class="nav-btn" onclick="showPage('bookings',this)">Bookings</button>
+    <button class="nav-btn" onclick="showPage('inventory',this)">Inventory</button>
+  </div>
+  <div class="topbar-right">
+    <div class="date-chip" id="date-chip"></div>
+    <button class="btn-add" onclick="openBookingModal()">+ New booking</button>
+  </div>
+</div>
+
+
+<!-- CONFIG BANNER -->
+<div class="cfg-banner" id="cfg-banner">
+  <div class="cfg-icon">⚙️</div>
+  <div class="cfg-body">
+    <strong>Connect to your Google Sheet</strong> — enter your Sheet ID and API key to sync bookings and inventory across all devices.
+    <div class="cfg-fields">
+      <div>
+        <label>Google Sheet ID</label>
+        <input type="text" id="cfg-sheet-id" placeholder="Paste Sheet ID from URL…">
+      </div>
+      <div>
+        <label>Google API Key</label>
+        <input type="text" id="cfg-api-key" placeholder="AIzaSy…">
+      </div>
+    </div>
+    <button class="cfg-save" onclick="saveConfig()">Save &amp; connect</button>
+    <div class="cfg-note">
+      Your credentials are saved in this browser only (localStorage). See the <strong>Setup guide</strong> tab in the Excel file for step-by-step instructions.
+    </div>
+  </div>
+</div>
+
+<!-- SYNC STATUS BAR -->
+<div class="sync-bar" id="sync-bar">
+  <div class="sync-dot" id="sync-dot"></div>
+  <span id="sync-text">Not connected — open Settings to link your Google Sheet</span>
+  <span style="flex:1"></span>
+  <button onclick="toggleCfg()" style="background:none;border:0.5px solid rgba(255,255,255,0.2);border-radius:6px;color:rgba(255,255,255,0.55);font-size:11px;padding:3px 10px;cursor:pointer;">Settings</button>
+  <button onclick="syncFromSheet()" style="background:none;border:0.5px solid rgba(255,255,255,0.2);border-radius:6px;color:rgba(255,255,255,0.55);font-size:11px;padding:3px 10px;cursor:pointer;">↻ Sync now</button>
+</div>
+
+<!-- DASHBOARD -->
+<div id="page-dashboard" class="page active">
+  <div class="stats" id="dash-stats"></div>
+  <div class="stats" id="dash-type-avail" style="margin-top:8px;margin-bottom:0"></div>
+  <div class="alert-strip" id="dash-alerts" style="margin-top:16px"></div>
+  <div class="section-title">Next 7 days</div>
+  <div class="week-strip" id="week-strip"></div>
+  <div class="section-title">Committed bookings</div>
+  <div id="dash-bookings"></div>
+</div>
+
+<!-- BOOKINGS -->
+<div id="page-bookings" class="page">
+  <div class="filter-bar">
+    <select class="filter-sel" id="bk-filter" onchange="renderBookingsPage()">
+      <option value="all">All bookings</option>
+      <option value="upcoming">Upcoming</option>
+      <option value="active">Active now</option>
+      <option value="past">Past</option>
+    </select>
+    <select class="filter-sel" id="bk-filter-paid" onchange="renderBookingsPage()">
+      <option value="">Any payment</option>
+      <option value="paid">Paid</option>
+      <option value="unpaid">Unpaid</option>
+    </select>
+  </div>
+  <div id="bookings-page-list"></div>
+</div>
+
+<!-- INVENTORY -->
+<div id="page-inventory" class="page">
+  <div class="inv-summary-bar" id="inv-summary-bar"></div>
+  <button class="btn-add" style="margin-bottom:20px" onclick="openTransferModal()">+ Add bikes from another store</button>
+  <div id="inv-grid"></div>
+</div>
+
+<div id="modal"></div>
+
+<script>
+// ════════════════════════════════════════════════════════════════
+// STATE
+// ════════════════════════════════════════════════════════════════
+const BIKE_TYPES = {
+  'city-ebike':         { label:'City E-Bike',          short:'City',       sizes:['Standard'] },
+  'gravel':             { label:'Gravel',                short:'Gravel',     sizes:['M','L'] },
+  'fat-tyre':           { label:'Fat Tyre - Ericeira',   short:'Fat',        sizes:['Standard'] },
+  'e-touring':          { label:'E-Touring',             short:'Touring',    sizes:['S','M'] },
+  'city-ebike-ericeira':{ label:'City E-Bike - Ericeira',short:'City-Eir',   sizes:['Standard'] },
+  'gravel-ericeira':    { label:'Gravel - Ericeira',     short:'Grav-Eir',   sizes:['S','M','L'] },
+  'e-mtb':              { label:'E-MTB',                 short:'E-MTB',      sizes:['M','L'] },
+  'mtb':                { label:'MTB',                   short:'MTB',        sizes:['M','L'] },
+};
+// Duration replaced by Return Date field
 const SOURCES   = ['Walk-in','Phone / WhatsApp','Website'];
 const PARTNER_STORES = [
   { id:'cascais',  name:'RODA Cascais',   loc:'Cascais' },
@@ -400,7 +775,10 @@ function durationDays(dur){
   if(s.includes('more')) return 8;
   return 1;
 }
-function bookingEndDate(b){ return addDays(b.start, durationDays(b.duration)-1); }
+function bookingEndDate(b){ 
+  if(b.returnDate && /^\d{4}-\d{2}-\d{2}$/.test(b.returnDate)) return b.returnDate;
+  return addDays(b.start, durationDays(b.duration)-1); 
+}
 function bookingIsActive(b,date){ return b.start<=date && bookingEndDate(b)>=date; }
 function bookingIsUpcoming(b){ return b.start>today(); } // strictly future, not today
 function bookingIsPast(b){ return bookingEndDate(b)<today(); }
@@ -491,7 +869,7 @@ function bookingTableRow(b, actions=true){
 
   return `<div class="bk-row" style="${isPast?'opacity:.5':''}">
     <div class="bk-cell"><div><div class="bk-who">${b.who}</div><div class="bk-source">${b.source}</div>${b.phone?`<a class="bk-phone" href="tel:${b.phone}">${b.phone}</a>`:''}</div></div>
-    <div class="bk-cell"><div><div style="font-weight:600">${fmt(b.start)}</div><div class="bk-source">${end!==b.start?'→ '+fmt(end):''}</div>${b.pickupTime?`<div class="bk-source">⏰ ${b.pickupTime}–${b.dropoffTime||''}</div>`:''}</div></div>
+    <div class="bk-cell"><div><div style="font-weight:600">${fmt(b.start)}${end!==b.start?' → '+fmt(end):''}</div>${b.pickupTime?`<div class="bk-source">⏰ ${b.pickupTime}–${b.dropoffTime||''}</div>`:''}<div class="bk-source">${[b.pickupPlace,b.dropoffPlace].filter(Boolean).join(' → ')||''}</div></div></div>
     <div class="bk-cell"><span class="bk-dur">${b.duration}</span></div>
     <div class="bk-cell">${typeChips(b.types)}</div>
     <div class="bk-cell">${tags.join(' ')}</div>
@@ -781,8 +1159,7 @@ function openBookingModal(editId){
   typeRowCount=0; // reset so IDs are always 0-based per modal open
   currentEditId=editId||null;
   const srcOpts=SOURCES.map(s=>`<option${b&&b.source===s?' selected':''}>${s}</option>`).join('');
-  const durOpts=DURATIONS.map(d=>`<option${b&&b.duration===d?' selected':''}>${d}</option>`).join('');
-
+  const 
   // Build type rows
   const typeRows=b?b.types:[];
   const initialRows=typeRows.length
@@ -807,14 +1184,20 @@ function openBookingModal(editId){
         <div class="fg-row">
           <div class="fg"><label>Start date</label>
             <input type="date" id="bk-start" value="${b?b.start:t}" onchange="checkBkAvail()"></div>
-          <div class="fg"><label>Duration</label>
-            <select id="bk-dur" onchange="checkBkAvail()">${durOpts}</select></div>
+          <div class="fg"><label>Return date</label>
+            <input type="date" id="bk-return" value="${b?b.returnDate||'':''}" onchange="checkBkAvail()"></div>
         </div>
         <div class="fg-row">
           <div class="fg"><label>Pickup time</label>
             <input type="time" id="bk-pickup" value="${b?b.pickupTime||'10:00':'10:00'}"></div>
           <div class="fg"><label>Drop-off time</label>
             <input type="time" id="bk-dropoff" value="${b?b.dropoffTime||'18:00':'18:00'}"></div>
+        </div>
+        <div class="fg-row">
+          <div class="fg"><label>Pick up place</label>
+            <select id="bk-pickup-place"><option value="">Select...</option><option value="Lisbon"${b&&b.pickupPlace==='Lisbon'?' selected':''}>Lisbon</option><option value="Cascais"${b&&b.pickupPlace==='Cascais'?' selected':''}>Cascais</option><option value="Ericeira"${b&&b.pickupPlace==='Ericeira'?' selected':''}>Ericeira</option><option value="Peniche"${b&&b.pickupPlace==='Peniche'?' selected':''}>Peniche</option><option value="Porto"${b&&b.pickupPlace==='Porto'?' selected':''}>Porto</option><option value="Other"${b&&b.pickupPlace==='Other'?' selected':''}>Other</option></select></div>
+          <div class="fg"><label>Drop-off place</label>
+            <select id="bk-dropoff-place"><option value="">Select...</option><option value="Lisbon"${b&&b.dropoffPlace==='Lisbon'?' selected':''}>Lisbon</option><option value="Cascais"${b&&b.dropoffPlace==='Cascais'?' selected':''}>Cascais</option><option value="Ericeira"${b&&b.dropoffPlace==='Ericeira'?' selected':''}>Ericeira</option><option value="Peniche"${b&&b.dropoffPlace==='Peniche'?' selected':''}>Peniche</option><option value="Porto"${b&&b.dropoffPlace==='Porto'?' selected':''}>Porto</option><option value="Other"${b&&b.dropoffPlace==='Other'?' selected':''}>Other</option></select></div>
         </div>
 
         <div class="fg"><label>Bikes requested</label>
@@ -900,10 +1283,10 @@ let currentEditId=null;
 function checkBkAvail(){
   const editId = currentEditId || null;
   const start=document.getElementById('bk-start')?.value;
-  const dur=document.getElementById('bk-dur')?.value;
-  if(!start||!dur||!/^\d{4}-\d{2}-\d{2}$/.test(start)) return;
-  const days=durationDays(dur);
-  const end=addDays(start,days-1);
+  const ret=document.getElementById('bk-return')?.value;
+  if(!start||!ret||!/^\d{4}-\d{2}-\d{2}$/.test(start)||!/^\d{4}-\d{2}-\d{2}$/.test(ret)) return;
+  const days=Math.round((new Date(ret)-new Date(start))/86400000)+1;
+  const end=ret;
   const rows=getTypeRows();
   let ok=true;
   let msg='';
@@ -949,9 +1332,12 @@ function saveBooking(){
   const phone=document.getElementById('bk-phone').value.trim();
   const country=document.getElementById('bk-country').value.trim();
   const start=document.getElementById('bk-start').value;
-  const duration=document.getElementById('bk-dur').value;
+  const returnDate=document.getElementById('bk-return').value;
+  const duration=returnDate&&start ? (() => { const d=Math.round((new Date(returnDate)-new Date(start))/(86400000))+1; return d+' day'+(d!==1?'s':''); })() : '';
   const pickupTime=document.getElementById('bk-pickup').value;
   const dropoffTime=document.getElementById('bk-dropoff').value;
+  const pickupPlace=document.getElementById('bk-pickup-place').value;
+  const dropoffPlace=document.getElementById('bk-dropoff-place').value;
   const source=document.getElementById('bk-source').value;
   const paidSumup=parseFloat(document.getElementById('bk-sumup').value)||0;
   const paidCash=parseFloat(document.getElementById('bk-cash').value)||0;
@@ -977,7 +1363,7 @@ function saveBooking(){
     const idx=bookings.findIndex(b=>String(b.id)===String(editId));
     console.log('Found at index:', idx);
     if(idx>=0){
-      bookings[idx]={id:String(editId),who,phone,country,start,duration,pickupTime,dropoffTime,types,paid,paidSumup,paidCash,source,notes};
+      bookings[idx]={id:String(editId),who,phone,country,start,returnDate,duration,pickupTime,dropoffTime,pickupPlace,dropoffPlace,types,paid,paidSumup,paidCash,source,notes};
       closeModal();
       renderAll();
       updateBookingInSheet(bookings[idx]);
@@ -986,7 +1372,7 @@ function saveBooking(){
     }
   } else {
     const newId = 'BK-' + Date.now().toString().slice(-6);
-    const newBk = {id:newId,who,phone,country,start,duration,pickupTime,dropoffTime,types,paid,paidSumup,paidCash,source,notes};
+    const newBk = {id:newId,who,phone,country,start,returnDate,duration,pickupTime,dropoffTime,pickupPlace,dropoffPlace,types,paid,paidSumup,paidCash,source,notes};
     bookings.push(newBk);
     closeModal();
     renderAll();
@@ -1123,7 +1509,7 @@ renderAll();
 // GOOGLE SHEETS SYNC
 // ════════════════════════════════════════════════════════════════
 const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbw2N8J01h9Lafu-tOPPXqxawNVosoO9y9xMLRTICHStgGzlsCfnJMwgEhGt-Sgyuppt/exec";
-const SHEET_BOOKINGS  = "Bookings!A4:P500";
+const SHEET_BOOKINGS  = "Bookings!A4:W500";
 const SHEET_BIKES_RNG = "Bikes!A4:F50";
 const APPEND_BK_RNG   = "Bookings!A4";
 
@@ -1258,10 +1644,12 @@ async function syncFromSheet(){
         notes=r[10]||'';
       } else {
         // NEW FORMAT — pad row to 16 cols since Sheets API trims trailing empty cells
-        while(r.length < 16) r.push('');
+        while(r.length < 24) r.push('');
         who=r[1]||''; phone=r[2]||''; country=r[3]||'';
         start=isoDate(r[4]||'');
-        pickupTime=r[5]||''; dropoffTime=r[6]||'';
+        const returnDate=isoDate(r[5]||'');
+        const pickupPlaceP=r[9]||''; const dropoffPlaceP=r[10]||'';
+        pickupTime=r[7]||''; dropoffTime=r[8]||'';
         if(start==='1899-12-30'||start==='1899-12-29') start='';
         if(pickupTime==='1899-12-30'||pickupTime==='1899-12-29') pickupTime='';
         if(dropoffTime==='1899-12-30'||dropoffTime==='1899-12-29') dropoffTime='';
@@ -1275,18 +1663,25 @@ async function syncFromSheet(){
         if(pickupTime && !String(pickupTime).includes(':')) pickupTime=decToTime(pickupTime);
         if(dropoffTime && !String(dropoffTime).includes(':')) dropoffTime=decToTime(dropoffTime);
         duration=r[7]||'Full day (10am–6pm)';
-        cq=parseInt(r[8])||0; gq=parseInt(r[9])||0; fq=parseInt(r[10])||0; tq=parseInt(r[11])||0;
-        paidSumup=parseFloat(r[12])||0; paidCash=parseFloat(r[13])||0;
-        notes=r[15]||'';
+        cq=parseInt(r[11])||0; gq=parseInt(r[12])||0; fq=parseInt(r[13])||0; tq=parseInt(r[14])||0;
+        const cqe=parseInt(r[15])||0; const gqe=parseInt(r[16])||0;
+        const emq=parseInt(r[17])||0; const mq=parseInt(r[18])||0;
+        paidSumup=parseFloat(r[19])||0; paidCash=parseFloat(r[20])||0;
+        notes=r[22]||'';
       }
 
       const types=[];
-      if(cq>0) types.push({type:'city-ebike',size:'Standard',qty:cq});
-      if(gq>0) types.push({type:'gravel',size:'Standard',qty:gq});
-      if(fq>0) types.push({type:'fat-tyre',size:'Standard',qty:fq});
-      if(tq>0) types.push({type:'e-touring',size:'Standard',qty:tq});
+      if(cq>0)  types.push({type:'city-ebike',size:'Standard',qty:cq});
+      if(gq>0)  types.push({type:'gravel',size:'Standard',qty:gq});
+      if(fq>0)  types.push({type:'fat-tyre',size:'Standard',qty:fq});
+      if(tq>0)  types.push({type:'e-touring',size:'Standard',qty:tq});
+      if(cqe>0) types.push({type:'city-ebike-ericeira',size:'Standard',qty:cqe});
+      if(gqe>0) types.push({type:'gravel-ericeira',size:'Standard',qty:gqe});
+      if(emq>0) types.push({type:'e-mtb',size:'Standard',qty:emq});
+      if(mq>0)  types.push({type:'mtb',size:'Standard',qty:mq});
       return {
-        id:rowId, who, phone, country, start, pickupTime, dropoffTime, duration,
+        id:rowId, who, phone, country, start, returnDate, pickupTime, dropoffTime,
+        pickupPlace:pickupPlaceP, dropoffPlace:dropoffPlaceP, duration,
         types: types.length?types:[{type:'city-ebike',size:'Standard',qty:1}],
         paid: paidSumup>0||paidCash>0, paidSumup, paidCash,
         source:'Phone / WhatsApp', notes
@@ -1333,9 +1728,14 @@ async function updateBookingInSheet(b){
   const gq = b.types.find(t=>t.type==='gravel')?.qty    || 0;
   const fq = b.types.find(t=>t.type==='fat-tyre')?.qty  || 0;
   const tq = b.types.find(t=>t.type==='e-touring')?.qty || 0;
+  const cqe = b.types.find(t=>t.type==='city-ebike-ericeira')?.qty || 0;
+  const gqe = b.types.find(t=>t.type==='gravel-ericeira')?.qty    || 0;
+  const emq = b.types.find(t=>t.type==='e-mtb')?.qty              || 0;
+  const mq  = b.types.find(t=>t.type==='mtb')?.qty                || 0;
   const row = [b.id, b.who, b.phone, b.country||'', b.start,
-               b.pickupTime||'', b.dropoffTime||'', b.duration,
-               cq, gq, fq, tq,
+               b.returnDate||'', b.duration||'', b.pickupTime||'', b.dropoffTime||'',
+               b.pickupPlace||'', b.dropoffPlace||'',
+               cq, gq, fq, tq, cqe, gqe, emq, mq,
                b.paidSumup||0, b.paidCash||0, (b.paidSumup||0)+(b.paidCash||0), b.notes||''];
   try {
     await fetch(APPS_SCRIPT_URL, {
@@ -1354,10 +1754,15 @@ async function writeBookingToSheet(b){
   const gq = b.types.find(t=>t.type==='gravel')?.qty    || 0;
   const fq = b.types.find(t=>t.type==='fat-tyre')?.qty  || 0;
   const tq = b.types.find(t=>t.type==='e-touring')?.qty || 0;
-  // Column order: ID,Who,Phone,Country,Start,Pickup,Dropoff,Dur,City,Gravel,Fat,Touring,SumUp,Cash,Total,Notes
+  // Column order: ID,Who,Phone,Country,Start,ReturnDate,Duration,PickupTime,DropoffTime,PickupPlace,DropoffPlace,City,Gravel,Fat,Touring,CityEir,GravelEir,EMTB,MTB,SumUp,Cash,Total,Notes
+  const cqe = b.types.find(t=>t.type==='city-ebike-ericeira')?.qty || 0;
+  const gqe = b.types.find(t=>t.type==='gravel-ericeira')?.qty    || 0;
+  const emq = b.types.find(t=>t.type==='e-mtb')?.qty              || 0;
+  const mq  = b.types.find(t=>t.type==='mtb')?.qty                || 0;
   const row = [b.id, b.who, b.phone, b.country||'', b.start,
-               b.pickupTime||'', b.dropoffTime||'', b.duration,
-               cq, gq, fq, tq,
+               b.returnDate||'', b.duration||'', b.pickupTime||'', b.dropoffTime||'',
+               b.pickupPlace||'', b.dropoffPlace||'',
+               cq, gq, fq, tq, cqe, gqe, emq, mq,
                b.paidSumup||0, b.paidCash||0, (b.paidSumup||0)+(b.paidCash||0), b.notes||''];
   try {
     await fetch(APPS_SCRIPT_URL, {
