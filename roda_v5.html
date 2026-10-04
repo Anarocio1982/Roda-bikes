@@ -334,19 +334,39 @@ const PREP_HOURS = 24;
 
 // Initial inventory
 let bikes = [
-  // City E-Bikes: 12 ready, 2 returned today → in 24h prep (ready tomorrow 30/05)
-  ...Array.from({length:12},(_,i)=>({ id:`CE${String(i+1).padStart(2,'0')}`, type:'city-ebike', size:'Standard', status:'ready',  prepUntil:null,         external:false, fromStore:null })),
-  { id:'CE13', type:'city-ebike', size:'Standard', status:'prep', prepUntil:'2026-05-30', external:false, fromStore:null },
-  { id:'CE14', type:'city-ebike', size:'Standard', status:'prep', prepUntil:'2026-05-30', external:false, fromStore:null },
-  // Gravel
-  { id:'GR01', type:'gravel',    size:'M',        status:'ready', prepUntil:null, external:false, fromStore:null },
-  { id:'GR02', type:'gravel',    size:'L',        status:'ready', prepUntil:null, external:false, fromStore:null },
-  // Fat Tyre
-  { id:'FT01', type:'fat-tyre',  size:'Standard', status:'ready', prepUntil:null, external:false, fromStore:null },
-  { id:'FT02', type:'fat-tyre',  size:'Standard', status:'ready', prepUntil:null, external:false, fromStore:null },
-  // E-Touring
-  { id:'ET01', type:'e-touring', size:'S',        status:'ready', prepUntil:null, external:false, fromStore:null },
-  { id:'ET02', type:'e-touring', size:'M',        status:'ready', prepUntil:null, external:false, fromStore:null },
+  // City E-Bike Lisbon (14)
+  ...Array.from({length:14},(_,i)=>({id:`CE${String(i+1).padStart(2,'0')}`,type:'city-ebike',size:'Standard',status:'ready',prepUntil:null,external:false,fromStore:null})),
+  // Gravel Lisbon (2)
+  {id:'GR01',type:'gravel',size:'M',status:'ready',prepUntil:null,external:false,fromStore:null},
+  {id:'GR02',type:'gravel',size:'L',status:'ready',prepUntil:null,external:false,fromStore:null},
+  // Fat Tyre - Ericeira (2)
+  {id:'FT01',type:'fat-tyre',size:'Standard',status:'ready',prepUntil:null,external:false,fromStore:null},
+  {id:'FT02',type:'fat-tyre',size:'Standard',status:'ready',prepUntil:null,external:false,fromStore:null},
+  // E-Touring (2)
+  {id:'ET01',type:'e-touring',size:'S',status:'ready',prepUntil:null,external:false,fromStore:null},
+  {id:'ET02',type:'e-touring',size:'M',status:'ready',prepUntil:null,external:false,fromStore:null},
+  // City E-Bike - Ericeira (20)
+  ...Array.from({length:20},(_,i)=>({id:`CEE${String(i+1).padStart(2,'0')}`,type:'city-ebike-ericeira',size:'Standard',status:'ready',prepUntil:null,external:false,fromStore:null})),
+  // Gravel - Ericeira (5: 2M, 2L, 1S)
+  {id:'GRE01',type:'gravel-ericeira',size:'M',status:'ready',prepUntil:null,external:false,fromStore:null},
+  {id:'GRE02',type:'gravel-ericeira',size:'M',status:'ready',prepUntil:null,external:false,fromStore:null},
+  {id:'GRE03',type:'gravel-ericeira',size:'L',status:'ready',prepUntil:null,external:false,fromStore:null},
+  {id:'GRE04',type:'gravel-ericeira',size:'L',status:'ready',prepUntil:null,external:false,fromStore:null},
+  {id:'GRE05',type:'gravel-ericeira',size:'S',status:'ready',prepUntil:null,external:false,fromStore:null},
+  // E-MTB (6: 3M, 3L)
+  {id:'EMTB01',type:'e-mtb',size:'M',status:'ready',prepUntil:null,external:false,fromStore:null},
+  {id:'EMTB02',type:'e-mtb',size:'M',status:'ready',prepUntil:null,external:false,fromStore:null},
+  {id:'EMTB03',type:'e-mtb',size:'M',status:'ready',prepUntil:null,external:false,fromStore:null},
+  {id:'EMTB04',type:'e-mtb',size:'L',status:'ready',prepUntil:null,external:false,fromStore:null},
+  {id:'EMTB05',type:'e-mtb',size:'L',status:'ready',prepUntil:null,external:false,fromStore:null},
+  {id:'EMTB06',type:'e-mtb',size:'L',status:'ready',prepUntil:null,external:false,fromStore:null},
+  // MTB (6: 3M, 3L)
+  {id:'MTB01',type:'mtb',size:'M',status:'ready',prepUntil:null,external:false,fromStore:null},
+  {id:'MTB02',type:'mtb',size:'M',status:'ready',prepUntil:null,external:false,fromStore:null},
+  {id:'MTB03',type:'mtb',size:'M',status:'ready',prepUntil:null,external:false,fromStore:null},
+  {id:'MTB04',type:'mtb',size:'L',status:'ready',prepUntil:null,external:false,fromStore:null},
+  {id:'MTB05',type:'mtb',size:'L',status:'ready',prepUntil:null,external:false,fromStore:null},
+  {id:'MTB06',type:'mtb',size:'L',status:'ready',prepUntil:null,external:false,fromStore:null},
 ];
 
 let bookings = [
